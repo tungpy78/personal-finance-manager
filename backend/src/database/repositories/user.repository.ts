@@ -11,6 +11,12 @@ export class UserRepository{
         return await User.findOne({where:{email}})
     }
     static async create(userData: IUserCreate) {
-    return await User.create(userData as any);
+    const newUser = await User.create(userData as any);
+
+    const plainUser = newUser.toJSON();
+
+    delete plainUser.password;
+
+    return plainUser;
   }
 }

@@ -8,3 +8,10 @@ export const RegisterSchema = z.object({
 })
 
 export type RegisterDTO = z.infer<typeof RegisterSchema>
+
+export const LoginSchema = z.object({
+    email: z.string().email('Định dạng email không hợp lệ'),
+    password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự')
+})
+
+export type LoginDTO = z.infer<typeof LoginSchema>
