@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "no-console": "warn",
+    "semi": ["error", "always"],
+    "quotes": ["error", "single"],
+    "@typescript-eslint/no-explicit-any": "error"
+  }
+}
