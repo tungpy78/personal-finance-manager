@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
 import { UserRepository } from "../../database/repositories/user.repository.js";
 import ApiError from "../../utils/ErrorClass.js";
-import type { RegisterDTO } from "../dtos/auth.dto.js";
+import type { LoginDTO, RegisterDTO } from "../dtos/auth.dto.js";
+import jwt from 'jsonwebtoken';
 
 export class AuthService{
     static async registerUser(data: RegisterDTO){
@@ -27,5 +28,28 @@ export class AuthService{
             email: newUser.email
         };
 
+    }
+
+    static async loginUser(data: LoginDTO) {
+        const user = await UserRepository.findByEmail(data.email);
+        if(!user){
+            throw new ApiError('Tài khoản không tồn tại!', 404);
+        }
+
+        const isMatch = await bcrypt.compare(data.password, user.password);
+        if(!isMatch){
+            throw new ApiError('Mật khẩu không chính xác!', 401);
+        }
+
+        const token = jwt.sign(
+            {id: user.id, username: user.username},
+            process.env.JWT_SECRET as string,
+            {expiresIn: process.env.JWT_EXPIRES_IN as any}
+        );
+
+        return {
+            user:{ id: user.id, username: user.username, email: user.email },
+            accessToken: token
+        };
     }
 }
