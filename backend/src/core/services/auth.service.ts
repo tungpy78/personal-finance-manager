@@ -30,7 +30,10 @@ export class AuthService{
 
     }
 
-    static async loginUser(data: LoginDTO) {
+    static async loginUser(data: LoginDTO): Promise<{
+        user: { id: number; username: string; email: string };
+        accessToken: string;
+    }> {
         const user = await UserRepository.findByEmail(data.email);
         if(!user){
             throw new ApiError('Tài khoản không tồn tại!', 404);
@@ -48,7 +51,7 @@ export class AuthService{
         );
 
         return {
-            user:{ id: user.id, username: user.username, email: user.email },
+            user:{ id: user.id , username: user.username, email: user.email },
             accessToken: token
         };
     }

@@ -1,10 +1,7 @@
+import type { CreationAttributes } from "sequelize";
 import User from "../models/User.js"
 
-export interface IUserCreate {
-  username: string;
-  email: string;
-  password: string;
-}
+export type IUserCreate = CreationAttributes<User>;
 
 export class UserRepository{
     static async findByEmail(email:string) {
