@@ -2,9 +2,9 @@ import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../config/database.js';
 
 class Category extends Model {
-  declare id: number;
-  declare name: string;
-  declare type: string; // 'INCOME' hoặc 'EXPENSE'
+  public id!: number;
+  public name!: string;
+  public type!: string; // 'INCOME' hoặc 'EXPENSE'
 }
 
 Category.init({
