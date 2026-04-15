@@ -1,11 +1,11 @@
-import { DataTypes, Model } from 'sequelize';
+import { DataTypes, Model, type CreationOptional } from 'sequelize';
 import sequelize from '../../config/database.js';
 
 class User extends Model {
-  public id!: number;
-  public username!: string;
-  public email!: string;
-  public password!: string;
+  declare id: CreationOptional<number>;
+  declare username: string;
+  declare email: string;
+  declare password: string;
 }
 
 User.init({

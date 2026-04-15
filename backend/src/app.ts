@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import errorHandler from './api/middlewares/errorHandler.js';
+import rootRouter from './api/routes/index.js';
 
 const app = express();
 
@@ -12,6 +13,8 @@ app.use(express.json()); // Cho phép API đọc dữ liệu JSON từ Frontend 
 app.get('/api/health', (req, res) => {
   res.status(200).json({ success: true, message: 'Hệ thống Quản lý chi tiêu đang hoạt động tốt!' });
 });
+
+app.use('/api/v1', rootRouter);
 
 // Chốt chặn 404: Bắt các API không tồn tại
 app.use((req, res, next) => {
