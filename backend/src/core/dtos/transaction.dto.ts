@@ -7,15 +7,18 @@ export const CreateTransactionSchema = z.object({
 
     description: z.string().max(255, 'Mô tả không được vượt quá 255 ký tự').optional(),
 
-    date: z.string()
-        .datetime({ message: 'Định dạng ngày tháng không hợp lệ (ISO 8601)' })
-        .refine((val) => {
-            const inputDate = new Date(val);
-            const currentDate = new Date();
-            return inputDate <= currentDate;
-        }, { 
-            message: 'Ngày giao dịch không được vượt quá thời điểm hiện tại' 
-        })
+    date: z.coerce.date({ 
+        required_error: 'Vui lòng chọn ngày giao dịch',
+        invalid_type_error: 'Ngày giao dịch không hợp lệ'
+    })
+    .refine((val) => {
+        const currentDate = new Date();
+        // Reset giờ phút giây của ngày hiện tại về 0 để chỉ so sánh ngày
+        currentDate.setHours(23, 59, 59, 999); 
+        return val <= currentDate;
+    }, { 
+        message: 'Ngày giao dịch không được vượt quá thời điểm hiện tại' 
+    })
 });
 
 export type CreateTransactionDTO = z.infer<typeof CreateTransactionSchema>;

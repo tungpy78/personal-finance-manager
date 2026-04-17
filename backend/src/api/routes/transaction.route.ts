@@ -13,4 +13,18 @@ transactionRouter.post(
   TransactionController.create
 );
 
+transactionRouter.delete(
+  '/:id',
+  protect,
+  TransactionController.delete
+)
+
+transactionRouter.put(
+  '/:id',
+  protect,
+  validate(CreateTransactionSchema),
+  TransactionController.update
+)
+
+
 export default transactionRouter;
