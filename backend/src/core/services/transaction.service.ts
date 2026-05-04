@@ -2,7 +2,7 @@ import Category from "../../database/models/Category.js";
 import { CategoryRepository } from "../../database/repositories/category.repository.js";
 import { TransactionRepository } from "../../database/repositories/transaction.repository.js";
 import ApiError from "../../utils/ErrorClass.js";
-import type { CreateTransactionDTO } from "../dtos/transaction.dto.js";
+import type { CreateTransactionDTO, SearchTransactionDTO } from "../dtos/transaction.dto.js";
 
 export class TransactionService {
     static async createTransaction(userId: number, data: CreateTransactionDTO){
@@ -59,4 +59,35 @@ export class TransactionService {
         return result;
     }
 
-}
+    static async searchTransactions(userId: number, data: SearchTransactionDTO) {
+        try {
+            const { sort, ...filters } = data;
+
+            const transactions = await TransactionRepository.findByCriteria(
+                userId,
+                filters 
+            );
+
+            if (sort === "date_desc") {
+                return transactions.sort((a, b) => b.date.getTime() - a.date.getTime());
+            }
+
+            if (sort === "date_asc") {
+            return transactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+            }
+
+            if (sort === "amount_desc") {
+                return transactions.sort((a, b) => b.amount - a.amount);
+            }
+
+            if (sort === "amount_asc") {
+                return transactions.sort((a, b) => a.amount - b.amount);
+            }
+
+            return transactions;
+        } catch (error: any) {
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(`Lỗi dịch vụ khi tìm kiếm giao dịch: ${error.message}`, 500);
+        }
+    }
+}   
