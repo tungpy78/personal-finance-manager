@@ -3,6 +3,7 @@ import { CategoryRepository } from "../../database/repositories/category.reposit
 import { TransactionRepository } from "../../database/repositories/transaction.repository.js";
 import ApiError from "../../utils/ErrorClass.js";
 import type { CreateTransactionDTO } from "../dtos/transaction.dto.js";
+import { BudgetService } from "./budget.service.js";
 
 export class TransactionService {
     static async createTransaction(userId: number, data: CreateTransactionDTO){
@@ -20,7 +21,23 @@ export class TransactionService {
             date: new Date(data.date)
         });
 
-        return result;
+        let budgetAlert = null;
+
+        if (category.type === 'EXPENSE') {
+            const date = new Date(data.date);
+
+            budgetAlert = await BudgetService.checkBudgetAlert(
+                userId,
+                data.categoryId,
+                date.getMonth() + 1,
+                date.getFullYear()
+            );
+        }
+
+        return {
+            ...result,
+            budgetAlert
+        };
     }
 
     static async deleteTransaction(userId: number, transactionId: number){
@@ -39,24 +56,52 @@ export class TransactionService {
 
     }
 
-    static async updateTransaction(userId: number, transactionId: number, data: CreateTransactionDTO){
-        const transaction = await TransactionRepository.findByPk(transactionId);
-        if(!transaction){
-            throw new ApiError('Giao dịch không tồn tại!', 404)
+    static async updateTransaction(userId: number, transactionId: number, data: any) {
+        const oldTransaction = await TransactionRepository.findByPk(transactionId);
+
+        if (!oldTransaction) {
+            throw new ApiError('Giao dịch không tồn tại!', 404);
         }
 
-        if(transaction.userId !== userId){
-            throw new ApiError('Bạn không có quyền sửa giao dịch của người khác!', 403);
+        if (oldTransaction.userId !== userId) {
+            throw new ApiError('Không có quyền!', 403);
         }
 
-        const category = await CategoryRepository.findByPk(data.categoryId)
-        if (!category) {
+        const newCategory = await CategoryRepository.findByPk(data.categoryId);
+        if (!newCategory) {
             throw new ApiError('Danh mục không tồn tại!', 404);
         }
 
         const result = await TransactionRepository.update(transactionId, data);
 
-        return result;
-    }
+        // ✅ check cả category cũ + mới
+        const affectedCategories = new Set<number>();
+        affectedCategories.add(oldTransaction.categoryId);
+        affectedCategories.add(data.categoryId);
 
+        const alerts: any[] = [];
+        const date = new Date(data.date);
+
+        for (const catId of affectedCategories) {
+            const category = await CategoryRepository.findByPk(catId);
+
+            if (category?.type === 'EXPENSE') {
+                const alert = await BudgetService.checkBudgetAlert(
+                    userId,
+                    catId,
+                    date.getMonth() + 1,
+                    date.getFullYear()
+                );
+
+                if (alert) {
+                    alerts.push({ categoryId: catId, ...alert });
+                }
+            }
+        }
+
+        return {
+            ...result,
+            budgetAlerts: alerts
+        };
+    }
 }
