@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { TransactionController } from '../controllers/transaction.controller.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { validate } from '../middlewares/validateMiddleware.js';
-import { CreateTransactionSchema } from '../../core/dtos/transaction.dto.js';
+import { CreateTransactionSchema, SearchTransactionSchema } from '../../core/dtos/transaction.dto.js';
 
 const transactionRouter = Router();
 
@@ -26,5 +26,11 @@ transactionRouter.put(
   TransactionController.update
 )
 
+transactionRouter.get(
+  '/search',
+  protect,
+  validate(SearchTransactionSchema),
+  TransactionController.search
+)
 
 export default transactionRouter;

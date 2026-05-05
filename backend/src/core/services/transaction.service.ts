@@ -2,7 +2,7 @@ import Category from "../../database/models/Category.js";
 import { CategoryRepository } from "../../database/repositories/category.repository.js";
 import { TransactionRepository } from "../../database/repositories/transaction.repository.js";
 import ApiError from "../../utils/ErrorClass.js";
-import type { CreateTransactionDTO } from "../dtos/transaction.dto.js";
+import type { CreateTransactionDTO, SearchTransactionDTO } from "../dtos/transaction.dto.js";
 import { BudgetService } from "./budget.service.js";
 
 export class TransactionService {
@@ -74,34 +74,7 @@ export class TransactionService {
 
         const result = await TransactionRepository.update(transactionId, data);
 
-        // ✅ check cả category cũ + mới
-        const affectedCategories = new Set<number>();
-        affectedCategories.add(oldTransaction.categoryId);
-        affectedCategories.add(data.categoryId);
-
-        const alerts: any[] = [];
-        const date = new Date(data.date);
-
-        for (const catId of affectedCategories) {
-            const category = await CategoryRepository.findByPk(catId);
-
-            if (category?.type === 'EXPENSE') {
-                const alert = await BudgetService.checkBudgetAlert(
-                    userId,
-                    catId,
-                    date.getMonth() + 1,
-                    date.getFullYear()
-                );
-
-                if (alert) {
-                    alerts.push({ categoryId: catId, ...alert });
-                }
-            }
-        }
-
-        return {
-            ...result,
-            budgetAlerts: alerts
-        };
+        return result;
     }
+
 }
