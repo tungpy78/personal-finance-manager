@@ -14,7 +14,7 @@ Category.init({
 }, { 
   sequelize, 
   tableName: 'Categories',
-  timestamps: true 
+  timestamps: true
 });
 
 export default Category;
