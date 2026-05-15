@@ -30,7 +30,12 @@ Transaction.init({
 }, { 
   sequelize, 
   tableName: 'Transactions',
-  timestamps: true 
+  timestamps: true,
+  indexes: [
+    {
+      fields: ['user_id']
+    }
+  ]
 });
 
 export default Transaction;

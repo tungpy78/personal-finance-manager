@@ -44,4 +44,15 @@ export class TransactionController {
         }
     }
 
+    static async search(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const userId = req.user.id;
+            const filters = req.body;
+            const result = await TransactionService.searchTransactions(userId, filters);
+            return AppResponse.success(res, result, "Tìm kiếm thành công", 200);
+        } catch (error) {
+            next(error);
+        }
+    }
+
 }
