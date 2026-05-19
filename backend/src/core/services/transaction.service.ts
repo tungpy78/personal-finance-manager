@@ -1,12 +1,14 @@
-import Category from "../../database/models/Category.js";
 import { CategoryRepository } from "../../database/repositories/category.repository.js";
 import { TransactionRepository } from "../../database/repositories/transaction.repository.js";
 import ApiError from "../../utils/ErrorClass.js";
 import type { CreateTransactionDTO, SearchTransactionDTO } from "../dtos/transaction.dto.js";
+import { BudgetService } from "./budget.service.js";
 
 export class TransactionService {
-    static async createTransaction(userId: number, data: CreateTransactionDTO){
-        const category = await CategoryRepository.findByPk(data.categoryId)
+    
+    // --- 1. THÊM GIAO DỊCH (Có kiểm tra ngân sách) ---
+    static async createTransaction(userId: number, data: CreateTransactionDTO) {
+        const category = await CategoryRepository.findByPk(data.categoryId);
         if (!category) {
             throw new ApiError('Danh mục không tồn tại!', 404);
         }
@@ -20,45 +22,92 @@ export class TransactionService {
             date: new Date(data.date)
         });
 
-        return result;
-    }
+        let budgetAlert = null;
 
-    static async deleteTransaction(userId: number, transactionId: number){
-        const transaction = await TransactionRepository.findByPk(transactionId);
-        if(!transaction){
-            throw new ApiError('Giao dịch không tồn tại!', 404)
+        // Nếu là khoản CHI, gọi BudgetService để kiểm tra cảnh báo
+        if (category.type === 'EXPENSE') {
+            const date = new Date(data.date);
+            budgetAlert = await BudgetService.checkBudgetAlert(
+                userId,
+                data.categoryId,
+                date.getMonth() + 1,
+                date.getFullYear()
+            );
         }
 
-        if(transaction.userId !== userId){
+        return {
+            ...result,
+            budgetAlert
+        };
+    }
+
+    // --- 2. XÓA GIAO DỊCH ---
+    static async deleteTransaction(userId: number, transactionId: number) {
+        const transaction = await TransactionRepository.findByPk(transactionId);
+        if (!transaction) {
+            throw new ApiError('Giao dịch không tồn tại!', 404);
+        }
+
+        if (transaction.userId !== userId) {
             throw new ApiError('Bạn không có quyền xóa giao dịch của người khác!', 403);
         }
 
         await TransactionRepository.delete(transactionId);
 
         return { message: "Xóa giao dịch thành công!" };
-
     }
 
-    static async updateTransaction(userId: number, transactionId: number, data: CreateTransactionDTO){
-        const transaction = await TransactionRepository.findByPk(transactionId);
-        if(!transaction){
-            throw new ApiError('Giao dịch không tồn tại!', 404)
+    // --- 3. SỬA GIAO DỊCH (Có kiểm tra chéo ngân sách cũ & mới) ---
+    static async updateTransaction(userId: number, transactionId: number, data: CreateTransactionDTO) {
+        const oldTransaction = await TransactionRepository.findByPk(transactionId);
+
+        if (!oldTransaction) {
+            throw new ApiError('Giao dịch không tồn tại!', 404);
         }
 
-        if(transaction.userId !== userId){
+        if (oldTransaction.userId !== userId) {
             throw new ApiError('Bạn không có quyền sửa giao dịch của người khác!', 403);
         }
 
-        const category = await CategoryRepository.findByPk(data.categoryId)
-        if (!category) {
+        const newCategory = await CategoryRepository.findByPk(data.categoryId);
+        if (!newCategory) {
             throw new ApiError('Danh mục không tồn tại!', 404);
         }
 
         const result = await TransactionRepository.update(transactionId, data);
 
-        return result;
+        // Kiểm tra ngân sách cho cả danh mục cũ và danh mục mới (nếu có thay đổi)
+        const affectedCategories = new Set<number>();
+        affectedCategories.add(oldTransaction.categoryId);
+        affectedCategories.add(data.categoryId);
+
+        const alerts: any[] = [];
+        const date = new Date(data.date);
+
+        for (const catId of affectedCategories) {
+            const category = await CategoryRepository.findByPk(catId);
+
+            if (category?.type === 'EXPENSE') {
+                const alert = await BudgetService.checkBudgetAlert(
+                    userId,
+                    catId,
+                    date.getMonth() + 1,
+                    date.getFullYear()
+                );
+
+                if (alert) {
+                    alerts.push({ categoryId: catId, ...alert });
+                }
+            }
+        }
+
+        return {
+            ...result,
+            budgetAlerts: alerts
+        };
     }
 
+    // --- 4. TÌM KIẾM VÀ LỌC LỊCH SỬ GIAO DỊCH ---
     static async searchTransactions(userId: number, data: SearchTransactionDTO) {
         try {
             const { sort, ...filters } = data;
@@ -73,7 +122,7 @@ export class TransactionService {
             }
 
             if (sort === "date_asc") {
-            return transactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+                return transactions.sort((a, b) => a.date.getTime() - b.date.getTime());
             }
 
             if (sort === "amount_desc") {
@@ -90,4 +139,4 @@ export class TransactionService {
             throw new ApiError(`Lỗi dịch vụ khi tìm kiếm giao dịch: ${error.message}`, 500);
         }
     }
-}   
+}

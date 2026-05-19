@@ -22,4 +22,4 @@ Budget.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 Category.hasMany(Budget, { foreignKey: 'category_id', as: 'budgets' });
 Budget.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
 
-export { User, Category, Transaction, sequelize };
+export { User, Category, Transaction, Budget, sequelize };
