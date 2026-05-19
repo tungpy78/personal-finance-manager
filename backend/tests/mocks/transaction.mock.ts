@@ -1,4 +1,4 @@
-import type { SearchTransactionDTO } from "../../src/core/dtos/transaction.dto.js";
+import type { CreateTransactionDTO, SearchTransactionDTO } from "../../src/core/dtos/transaction.dto.js";
 
 export const mockTransactions = [
     {
@@ -56,4 +56,27 @@ export const mockSearchFilters = {
     byDateRange: { begin_date: new Date("2026-05-01"), end_date: new Date("2026-05-02") } as SearchTransactionDTO,
     withSortDateDesc: { sort: "date_desc" } as SearchTransactionDTO,
     withSortAmountAsc: { sort: "amount_asc" } as SearchTransactionDTO
+};
+
+export const mockCreateInput = {
+    validIncome: {
+        amount: 5000000,
+        categoryId: 1, // Giả sử 1 là danh mục Lương (INCOME)
+        description: "Lương tháng này",
+        date: new Date("2026-05-20")
+    } as CreateTransactionDTO,
+    
+    validExpense: {
+        amount: 200000,
+        categoryId: 2, // Giả sử 2 là danh mục Ăn uống (EXPENSE)
+        description: "Đi ăn buffet",
+        date: new Date("2026-05-21")
+    } as CreateTransactionDTO,
+    
+    invalidCategory: {
+        amount: 100000,
+        categoryId: 999, // Danh mục không tồn tại
+        description: "Lỗi danh mục",
+        date: new Date("2026-05-21")
+    } as CreateTransactionDTO
 };
