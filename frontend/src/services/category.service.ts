@@ -4,7 +4,16 @@ import axiosClient from "./axiosClient";
 
 
 export const categoryApi = {
-    getAll: () => {
-        return axiosClient.get<any | ApiResponse<Category[]>>('/categories');
+    getAll: (filters?: { keyword?: string; type?: string }) => {
+        return axiosClient.get<ApiResponse<Category[]>>('/categories', { params: filters });
     },
+    create: (data: Partial<Category>) => {
+        return axiosClient.post<ApiResponse<Category>>('/categories', data);
+    },
+    update: (id: number, data: Partial<Category>) => {
+        return axiosClient.put<ApiResponse<Category>>(`/categories/${id}`, data);
+    },
+    delete: (id: number) => {
+        return axiosClient.delete<ApiResponse<null>>(`/categories/${id}`);
+    }
 };

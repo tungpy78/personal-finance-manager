@@ -5,6 +5,8 @@ import type { JSX } from 'react';
 import { useAuthStore } from '../stores/auth.store';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
+import { CategoryPage } from '../pages/CategoryPage';
+
 
 const DashboardPage = () => <h2>Trang Tổng quan (Charts)</h2>;
 const NotFoundPage = () => <h2>404 - Không tìm thấy trang</h2>;
@@ -47,7 +49,9 @@ export const AppRoutes = () => {
             children: [
                 { index: true, element: <DashboardPage /> },
                 { path: 'transactions', element: <TransactionPage /> },
+                { path: 'categories', element: <CategoryPage /> },
                 { path: 'settings', element: <h2>Cài đặt</h2> },
+
             ]
         },
         {

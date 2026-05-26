@@ -6,7 +6,7 @@ import { CategorySchema } from "../../core/dtos/category.dto.js";
 
 const router = Router();
 
-router.get('/', CategoryController.getCategories);
+router.get('/', protect, CategoryController.getCategories);
 router.post('/', protect, validate(CategorySchema), CategoryController.createCategory);
 router.put('/:id', protect, validate(CategorySchema), CategoryController.updateCategory);
 router.delete('/:id', protect, CategoryController.deleteCategory);

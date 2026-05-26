@@ -25,8 +25,10 @@ export const MainLayout = () => {
     const menuItems = [
         { key: '/', icon: <DashboardOutlined />, label: 'Tổng quan' },
         { key: '/transactions', icon: <TransactionOutlined />, label: 'Sổ giao dịch' },
+        { key: '/categories', icon: <WalletOutlined />, label: 'Danh mục' },
         { key: '/settings', icon: <SettingOutlined />, label: 'Cài đặt' },
     ];
+
 
     return (
         <Layout style={{ minHeight: '100vh' }}>

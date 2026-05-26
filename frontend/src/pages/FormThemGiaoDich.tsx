@@ -6,9 +6,10 @@ import dayjs from 'dayjs'; // Thư viện xử lý ngày tháng chuẩn của An
 import { transactionSchema, type TransactionFormValues } from '../utils/schemas/transaction.schema';
 import { categoryApi } from '../services/category.service';
 import type { AxiosError } from 'axios';
-import type { ApiErrorResponse } from '../types/api.type';
+import type { ApiErrorResponse, ApiResponse } from '../types/api.type';
 import type { Category } from '../types/category.type';
 import { transactionApi } from '../services/transaction.service';
+import type { CreateTransactionResponse } from '../types/transaction.type';
 
 interface FormThemGiaoDichProps {
     open: boolean;
@@ -24,9 +25,9 @@ export const FormThemGiaoDich = ({ open, onClose, onSuccess }: FormThemGiaoDichP
      const fetchCategories = async () => {
         setLoadingCategories(true);
         try {
-            const response = await categoryApi.getAll(); 
-            console.log("categoty", categories) 
-            setCategories(response.data);
+            const { data } = await categoryApi.getAll() as unknown as ApiResponse<Category[]>; 
+            console.log("categoty", data) 
+            setCategories(data);
         } catch (error) {
             const err = error as AxiosError<ApiErrorResponse>
             message.error(err.message);
@@ -50,9 +51,8 @@ export const FormThemGiaoDich = ({ open, onClose, onSuccess }: FormThemGiaoDichP
 
     const onSubmit = async (data: TransactionFormValues) => {
         try {
-            const response = await transactionApi.create(data);
+            const { data: resultData } = await transactionApi.create(data) as unknown as ApiResponse<CreateTransactionResponse>;
             
-            const resultData = response.data 
 
             if (resultData.budgetAlert) {
                 const alert = resultData.budgetAlert;
