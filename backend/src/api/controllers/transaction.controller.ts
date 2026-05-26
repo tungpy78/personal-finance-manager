@@ -4,6 +4,18 @@ import AppResponse from "../../utils/AppResponse.js";
 import type { AuthRequest } from "../middlewares/authMiddleware.js";
 
 export class TransactionController {
+    static async getAll(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const userId = req.user.id;
+
+            const result = await TransactionService.getTransaction(userId);
+            return AppResponse.success(res, result, 'Lấy lịch sử giao dịch thành công!', 200)
+
+        } catch (error) {
+            next(error)
+        }
+    }
+
     static async create(req: AuthRequest, res: Response, next: NextFunction){
         try {
             const userId = req.user.id;

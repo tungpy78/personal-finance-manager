@@ -1,10 +1,19 @@
 import { Op, type CreationAttributes } from "sequelize";
 import Transaction from "../models/Transaction.js";
 import type { CreateTransactionDTO, SearchTransactionDTO } from "../../core/dtos/transaction.dto.js";
+import { tr } from "zod/locales";
 
 export type ITransactionCreate = CreationAttributes<Transaction>;
 
 export class TransactionRepository {
+    static async getByUser(userId: number) {
+        const transaction = await Transaction.findAll({
+            where: {userId: userId}
+        })
+
+        return transaction
+    }
+
     static async create(data: ITransactionCreate) {
         const newTransaction = await Transaction.create(data);
 

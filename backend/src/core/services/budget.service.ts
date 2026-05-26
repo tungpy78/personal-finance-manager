@@ -33,7 +33,7 @@ export class BudgetService {
         userId,
         categoryId: budget.categoryId,
         month,
-        year
+        year,
       });
 
       let percentage = 0;
