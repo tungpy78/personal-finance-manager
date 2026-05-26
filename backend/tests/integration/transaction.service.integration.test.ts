@@ -5,6 +5,7 @@ import Category from "../../src/database/models/Category.js";
 import Budget from "../../src/database/models/Budget.js";
 import sequelize from "../../src/config/database.js";
 import { mockSearchFilters } from "../mocks/transaction.mock.js";
+import { SearchTransactionSchema } from "../../src/core/dtos/transaction.dto.js";
 
 describe("TransactionService - Integration Test - searchTransactions", () => {
     let testUserId: number;
@@ -103,5 +104,116 @@ describe("TransactionService - Integration Test - searchTransactions", () => {
 
         expect(result.length).toBeGreaterThanOrEqual(1);
         expect(result.every(t => t.type === "EXPENSE")).toBeTruthy();
+    });
+
+    it("nên lọc đúng dữ liệu theo type = INCOME", async () => {
+        const result = await TransactionService.searchTransactions(testUserId, { type: "INCOME" });
+
+        expect(result.length).toBeGreaterThanOrEqual(1);
+        expect(result.every(t => t.type === "INCOME")).toBeTruthy();
+    });
+
+    it("nên lọc đúng dữ liệu theo categoryId", async () => {
+        const result = await TransactionService.searchTransactions(testUserId, {
+            categoryId: testCategoryExpenseId
+        });
+
+        expect(result.length).toBeGreaterThanOrEqual(1);
+        expect(result.every(t => t.categoryId === testCategoryExpenseId)).toBeTruthy();
+    });
+
+    it("nên lọc đúng dữ liệu theo khoảng thời gian hợp lệ", async () => {
+        const result = await TransactionService.searchTransactions(testUserId, {
+            begin_date: new Date("2026-05-01"),
+            end_date: new Date("2026-05-02")
+        });
+
+        expect(result.length).toBe(2);
+    });
+
+    it("BẢO MẬT (Chống IDOR): Hệ thống không được trả về giao dịch của người khác ngay cả khi truyền tham số tìm kiếm khớp", async () => {
+        // 1. Tạo một User khác để tránh vi phạm ràng buộc khóa ngoại (Foreign Key)
+        const otherUser = await User.create({
+            username: `otheruser_${Date.now()}`,
+            email: `other_${Date.now()}@example.com`,
+            password: "hashedpassword123"
+        });
+
+        // 2. Tạo một giao dịch thuộc về User khác này nhưng có từ khóa "Lương"
+        const otherUserTransaction = await Transaction.create({
+            userId: otherUser.id,
+            amount: 900000,
+            type: "INCOME",
+            categoryId: testCategoryIncomeId,
+            description: "Junk Lương của người khác",
+            date: new Date("2026-05-01")
+        });
+
+        // 3. Thực hiện tìm kiếm với userId của chính mình (testUserId) và từ khóa "Lương"
+        const result = await TransactionService.searchTransactions(testUserId, { search: "Lương" });
+
+        // Kết quả kỳ vọng: 
+        // 1. Tìm thấy giao dịch "Junk Lương Test" của chính mình.
+        // 2. Tuyệt đối KHÔNG tìm thấy giao dịch "Junk Lương của người khác" (IDOR được ngăn chặn).
+        const descriptions = result.map(t => t.description);
+        expect(descriptions).toContain("Junk Lương Test");
+        expect(descriptions).not.toContain("Junk Lương của người khác");
+
+        // 4. Dọn dẹp dữ liệu test bảo mật
+        await Transaction.destroy({ where: { id: otherUserTransaction.id } });
+        await User.destroy({ where: { id: otherUser.id } });
+    });
+
+    it("nên lọc đúng dữ liệu khi kết hợp nhiều bộ lọc cùng một lúc (Decision Table - Quy tắc 1)", async () => {
+        const result = await TransactionService.searchTransactions(testUserId, {
+            search: "Lương",
+            categoryId: testCategoryIncomeId,
+            type: "INCOME",
+            begin_date: new Date("2026-05-01"),
+            end_date: new Date("2026-05-02")
+        });
+
+        expect(result.length).toBe(1);
+        expect(result[0]?.description).toContain("Lương");
+        expect(result[0]?.categoryId).toBe(testCategoryIncomeId);
+        expect(result[0]?.type).toBe("INCOME");
+    });
+
+    it("TC06: nên trả về mảng rỗng khi tìm kiếm với từ khóa không tồn tại", async () => {
+        const result = await TransactionService.searchTransactions(testUserId, { search: "abcxyz" });
+        expect(result.length).toBe(0);
+    });
+
+    it("TC07: nên báo lỗi khi ngày bắt đầu lớn hơn ngày kết thúc", async () => {
+        const invalidFilter = {
+            begin_date: new Date("2026-05-03"),
+            end_date: new Date("2026-05-01")
+        };
+        await expect(SearchTransactionSchema.parseAsync(invalidFilter))
+            .rejects
+            .toThrow("Ngày kết thúc phải >= ngày bắt đầu");
+    });
+
+    it("TC08: nên báo lỗi khi ID danh mục âm (-1)", async () => {
+        const invalidFilter = {
+            categoryId: -1
+        };
+        await expect(SearchTransactionSchema.parseAsync(invalidFilter))
+            .rejects
+            .toThrow("ID danh mục phải là số nguyên dương");
+    });
+
+    it("TC09: nên trả về mảng rỗng và không crash khi tìm kiếm ký tự đặc biệt", async () => {
+        const result = await TransactionService.searchTransactions(testUserId, { search: "@@@@" });
+        expect(result.length).toBe(0);
+    });
+
+    it("TC10: nên báo lỗi khi kiểu sắp xếp không hợp lệ", async () => {
+        const invalidFilter = {
+            sort: "abc" as any
+        };
+        await expect(SearchTransactionSchema.parseAsync(invalidFilter))
+            .rejects
+            .toThrow();
     });
 });
