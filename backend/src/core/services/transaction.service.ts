@@ -5,6 +5,11 @@ import type { CreateTransactionDTO, SearchTransactionDTO } from "../dtos/transac
 import { BudgetService } from "./budget.service.js";
 
 export class TransactionService {
+
+    static async getTransaction(userId: number) {
+        const transaction = await TransactionRepository.getByUser(userId);
+        return transaction;
+    }
     
     // --- 1. THÊM GIAO DỊCH (Có kiểm tra ngân sách) ---
     static async createTransaction(userId: number, data: CreateTransactionDTO) {

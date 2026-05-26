@@ -6,6 +6,13 @@ import { CreateTransactionSchema, SearchTransactionSchema } from '../../core/dto
 
 const transactionRouter = Router();
 
+
+transactionRouter.get(
+  '/',
+  protect,
+  TransactionController.getAll
+)
+
 transactionRouter.post(
   '/', 
   protect, 
