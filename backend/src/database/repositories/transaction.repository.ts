@@ -57,7 +57,7 @@ export class TransactionRepository {
                     userId,
                     ...(filters.search && { description: { [Op.like]: `%${filters.search}%` } }),
                     ...(filters.type && { type: filters.type.toUpperCase() }),
-                    ...(filters.category_id && { category_id: Number(filters.category_id) }),
+                    ...(filters.categoryId && { categoryId: Number(filters.categoryId) }),
                     ...(filters.begin_date || filters.end_date
                         ? {
                             date: {

@@ -3,7 +3,7 @@ import 'dotenv/config';
 
 // Ensure your server is running before executing this load test
 const URL = process.env.API_URL || 'http://localhost:5000/api/v1/transactions/search';
-const JWT_TOKEN = process.env.TEST_JWT_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJ0dW5nIGFuaCIsImlhdCI6MTc3Nzg4MzUzMCwiZXhwIjoxNzc3OTY5OTMwfQ.pD4SX6HWOWi2XiqDY52sutiCEN5R19Va4gTW32APWE4'; // Cần một token hợp lệ để test API có auth
+const JWT_TOKEN = process.env.TEST_JWT_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTYsInVzZXJuYW1lIjoiaHVuZyIsImlhdCI6MTc3OTc1OTE2OSwiZXhwIjoxNzc5ODQ1NTY5fQ.9Ac15iM_MbiZhEhmLXA4FlZl01S6glxObJ_KBRaQb0I'; // Cần một token hợp lệ để test API có auth
 
 async function runLoadTest() {
     console.log(`Bắt đầu Load Test cho endpoint: ${URL}`);
@@ -13,7 +13,7 @@ async function runLoadTest() {
         connections: 100, // Số lượng kết nối đồng thời
         pipelining: 1,
         duration: 10, // Thời gian chạy test (giây)
-        method: 'GET', // API search sử dụng POST
+        method: 'POST', // API search sử dụng POST
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${JWT_TOKEN}`

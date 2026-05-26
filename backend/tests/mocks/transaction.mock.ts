@@ -52,10 +52,12 @@ export const mockSearchFilters = {
     byTypeIncome: { type: "INCOME" } as SearchTransactionDTO,
     byTypeExpense: { type: "EXPENSE" } as SearchTransactionDTO,
     bySearchString: { search: "Lương" } as SearchTransactionDTO,
-    byCategoryId: { category_id: 2 } as SearchTransactionDTO,
+    byCategoryId: { categoryId: 2 } as SearchTransactionDTO,
     byDateRange: { begin_date: new Date("2026-05-01"), end_date: new Date("2026-05-02") } as SearchTransactionDTO,
     withSortDateDesc: { sort: "date_desc" } as SearchTransactionDTO,
-    withSortAmountAsc: { sort: "amount_asc" } as SearchTransactionDTO
+    withSortDateAsc: { sort: "date_asc" } as SearchTransactionDTO,
+    withSortAmountAsc: { sort: "amount_asc" } as SearchTransactionDTO,
+    withSortAmountDesc: { sort: "amount_desc" } as SearchTransactionDTO
 };
 
 export const mockCreateInput = {

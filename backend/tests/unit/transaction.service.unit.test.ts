@@ -51,6 +51,28 @@ describe("TransactionService - Unit Test - searchTransactions", () => {
         expect(result[2]?.amount).toBe(500000); // id: 1
     });
 
+    it("nên sắp xếp theo date_asc đúng cách", async () => {
+        const userTransactions = mockTransactions.filter(t => t.userId === userId);
+        mockFindByCriteria.mockResolvedValue([...userTransactions] as any);
+
+        const result = await TransactionService.searchTransactions(userId, mockSearchFilters.withSortDateAsc);
+
+        expect(result[0]?.id).toBe(1); // Date 2026-05-01
+        expect(result[1]?.id).toBe(2); // Date 2026-05-02
+        expect(result[2]?.id).toBe(3); // Date 2026-05-03
+    });
+
+    it("nên sắp xếp theo amount_desc đúng cách", async () => {
+        const userTransactions = mockTransactions.filter(t => t.userId === userId);
+        mockFindByCriteria.mockResolvedValue([...userTransactions] as any);
+
+        const result = await TransactionService.searchTransactions(userId, mockSearchFilters.withSortAmountDesc);
+
+        expect(result[0]?.amount).toBe(500000); // id: 1
+        expect(result[1]?.amount).toBe(200000); // id: 2
+        expect(result[2]?.amount).toBe(100000); // id: 3
+    });
+
     it("nên ném ra lỗi nếu repository ném lỗi", async () => {
         mockFindByCriteria.mockRejectedValue(new Error("DB Error"));
 

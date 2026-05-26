@@ -33,7 +33,7 @@ transactionRouter.put(
   TransactionController.update
 )
 
-transactionRouter.get(
+transactionRouter.post(
   '/search',
   protect,
   validate(SearchTransactionSchema),

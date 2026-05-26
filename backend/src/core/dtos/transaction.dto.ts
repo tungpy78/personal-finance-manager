@@ -40,8 +40,8 @@ export const SearchTransactionSchema = z.object({
     sort: z
         .preprocess((val) => (val === "" ? undefined : val), z.enum(["date_asc", "date_desc", "amount_asc", "amount_desc"]).optional()),
 
-    category_id: z
-        .preprocess((val) => (val === "" ? undefined : val), z.coerce.number().optional()),
+    categoryId: z
+        .preprocess((val) => (val === "" ? undefined : val), z.coerce.number().int().positive("ID danh mục phải là số nguyên dương").optional()),
 
     type: z
         .preprocess((val) => (val === "" ? undefined : val), z.enum(["INCOME", "EXPENSE"]).optional()),
