@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Row, Col, Statistic, Progress, List, Avatar, Typography, Tag, message } from 'antd';
-import { PlusOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Statistic, Progress, List, Avatar, Typography, Tag, message, Form, Input, Select, DatePicker, Button, Space } from 'antd';
+import { PlusOutlined, ArrowUpOutlined, ArrowDownOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import { FloatButton } from 'antd';
 import { FormThemGiaoDich } from './FormThemGiaoDich';
 import type { Transaction } from '../types/transaction.type';
 import { transactionApi } from '../services/transaction.service';
 import { budgetApi } from '../services/budget.service'; // 1. Import thêm budgetApi
+import { categoryApi } from '../services/category.service';
+import type { Category } from '../types/category.type';
 import type { AxiosError } from 'axios';
-import type { ApiErrorResponse } from '../types/api.type';
+import type { ApiErrorResponse, ApiResponse } from '../types/api.type';
 import type { BudgetProgress } from '../types/budget.type';
 import { formatVND } from '../utils/formatVND';
+import dayjs from 'dayjs';
 
 const { Text, Title } = Typography;
 
@@ -17,18 +20,47 @@ export const TransactionPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [transaction, setTransaction] = useState<Transaction[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [loadingCategories, setLoadingCategories] = useState(false);
     
     const [budgetProgress, setBudgetProgress] = useState<BudgetProgress[]>([]);
+    const [form] = Form.useForm();
+
+    const fetchCategories = async () => {
+        setLoadingCategories(true);
+        try {
+            const response = await categoryApi.getAll() as unknown as ApiResponse<Category[]>;
+            const listCategories = response?.data || [];
+            setCategories(listCategories);
+        } catch (error) {
+            console.error('Lỗi khi lấy danh mục:', error);
+        } finally {
+            setLoadingCategories(false);
+        }
+    };
 
     const fetchData = async () => {
         try {
             setLoading(true);
-            const response: any = await transactionApi.getAll();
+            const searchFilters = form.getFieldsValue();
+            const payload: any = {
+                search: searchFilters.search || undefined,
+                type: searchFilters.type || undefined,
+                categoryId: searchFilters.categoryId ? Number(searchFilters.categoryId) : undefined,
+                sort: searchFilters.sort || undefined,
+            };
+
+            if (searchFilters.dateRange && searchFilters.dateRange[0] && searchFilters.dateRange[1]) {
+                payload.begin_date = searchFilters.dateRange[0].format('YYYY-MM-DD');
+                payload.end_date = searchFilters.dateRange[1].format('YYYY-MM-DD');
+            }
+
+            const response: any = await transactionApi.search(payload);
             const listData = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : [];
             setTransaction(listData); 
         } catch (error) {
             const err = error as AxiosError<ApiErrorResponse>;
-            message.error(err.message);
+            message.error(err.message || 'Lỗi khi lấy danh sách giao dịch');
         } finally {
             setLoading(false);
         }
@@ -47,13 +79,27 @@ export const TransactionPage = () => {
     };
 
     useEffect(() => {
+        fetchCategories();
         fetchData();
         fetchBudget();
     }, []);
 
-    console.log("budget", budgetProgress)
+    const watchType = Form.useWatch('type', form);
 
-    
+    const filteredCategoriesForFilter = useMemo(() => {
+        if (!watchType) return categories;
+        return categories.filter(cat => cat.type === watchType);
+    }, [categories, watchType]);
+
+    const disabledDate = (current: dayjs.Dayjs) => {
+        return current && current > dayjs().endOf('day');
+    };
+
+    const handleResetFilter = () => {
+        form.resetFields();
+        fetchData();
+    };
+
     const { totalIncome, totalExpense, currentBalance } = useMemo(() => {
         let income = 0; let expense = 0;
         transaction.forEach(item => {
@@ -106,22 +152,100 @@ export const TransactionPage = () => {
 
             
             <Card title="Lịch sử giao dịch" bordered={false} style={{ borderRadius: 12 }}>
+                {/* Bộ lọc tra cứu và tìm kiếm */}
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={fetchData}
+                    style={{
+                        marginBottom: 24,
+                        padding: '16px 24px',
+                        background: '#fafafa',
+                        borderRadius: 8,
+                        border: '1px solid #f0f0f0'
+                    }}
+                >
+                    <Row gutter={[16, 8]} align="bottom">
+                        <Col xs={24} sm={12} md={6}>
+                            <Form.Item name="search" label="Mô tả" style={{ marginBottom: 0 }}>
+                                <Input placeholder="Tìm kiếm mô tả..." allowClear />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={12} sm={6} md={4}>
+                            <Form.Item name="type" label="Loại giao dịch" style={{ marginBottom: 0 }}>
+                                <Select placeholder="Tất cả" allowClear>
+                                    <Select.Option value="INCOME">Thu nhập</Select.Option>
+                                    <Select.Option value="EXPENSE">Chi tiêu</Select.Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col xs={12} sm={6} md={4}>
+                            <Form.Item name="categoryId" label="Danh mục" style={{ marginBottom: 0 }}>
+                                <Select placeholder="Tất cả" allowClear loading={loadingCategories}>
+                                    {filteredCategoriesForFilter.map((cat) => (
+                                        <Select.Option key={cat.id} value={cat.id}>
+                                            {cat.name}
+                                        </Select.Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Form.Item name="dateRange" label="Khoảng ngày" style={{ marginBottom: 0 }}>
+                                <DatePicker.RangePicker 
+                                    style={{ width: '100%' }} 
+                                    disabledDate={disabledDate}
+                                    placeholder={['Từ ngày', 'Đến ngày']}
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={12} md={4}>
+                            <Form.Item name="sort" label="Sắp xếp" style={{ marginBottom: 0 }}>
+                                <Select placeholder="Mặc định" allowClear>
+                                    <Select.Option value="date_desc">Mới nhất</Select.Option>
+                                    <Select.Option value="date_asc">Cũ nhất</Select.Option>
+                                    <Select.Option value="amount_desc">Số tiền lớn nhất</Select.Option>
+                                    <Select.Option value="amount_asc">Số tiền nhỏ nhất</Select.Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Row justify="end" style={{ marginTop: 16 }}>
+                        <Space>
+                            <Button icon={<ReloadOutlined />} onClick={handleResetFilter}>
+                                Reset
+                            </Button>
+                            <Button type="primary" icon={<SearchOutlined />} htmlType="submit" loading={loading}>
+                                Tìm kiếm
+                            </Button>
+                        </Space>
+                    </Row>
+                </Form>
+
                 <List
                     itemLayout="horizontal"
                     loading={loading}
                     dataSource={transaction}
-                    renderItem={(item) => (
-                        <List.Item
-                            style={{ padding: '16px 0', borderBottom: '1px solid #f0f0f0' }}
-                            extra={<Title level={4} style={{ color: item.type === 'INCOME' ? '#3f8600' : '#cf1322', margin: 0 }}>{item.type === 'INCOME' ? '+' : '-'}{formatVND(item.amount)}</Title>}
-                        >
-                            <List.Item.Meta
-                                avatar={<Avatar size="large" style={{ backgroundColor: item.type === 'INCOME' ? '#d9f7be' : '#ffd8bf', color: '#000' }} icon={item.type === 'INCOME' ? <ArrowUpOutlined /> : <ArrowDownOutlined />} />}
-                                title={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Text strong style={{ fontSize: 16 }}>{item.description}</Text><Tag color="blue">{item.categoryId}</Tag></div>}
-                                description={<Text type="secondary">{item.date}</Text>}
-                            />
-                        </List.Item>
-                    )}
+                    renderItem={(item) => {
+                        const categoryName = categories.find(cat => cat.id === item.categoryId)?.name || `Danh mục #${item.categoryId}`;
+                        return (
+                            <List.Item
+                                style={{ padding: '16px 0', borderBottom: '1px solid #f0f0f0' }}
+                                extra={<Title level={4} style={{ color: item.type === 'INCOME' ? '#3f8600' : '#cf1322', margin: 0 }}>{item.type === 'INCOME' ? '+' : '-'}{formatVND(item.amount)}</Title>}
+                            >
+                                <List.Item.Meta
+                                    avatar={<Avatar size="large" style={{ backgroundColor: item.type === 'INCOME' ? '#d9f7be' : '#ffd8bf', color: '#000' }} icon={item.type === 'INCOME' ? <ArrowUpOutlined /> : <ArrowDownOutlined />} />}
+                                    title={
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <Text strong style={{ fontSize: 16 }}>{item.description || 'Không có mô tả'}</Text>
+                                            <Tag color="blue">{categoryName}</Tag>
+                                        </div>
+                                    }
+                                    description={<Text type="secondary">{dayjs(item.date).format('YYYY-MM-DD')}</Text>}
+                                />
+                            </List.Item>
+                        );
+                    }}
                 />
             </Card>
 
