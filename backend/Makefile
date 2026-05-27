@@ -2,19 +2,17 @@
 # Author: Dang Viet Hung (UC03)
 # Description: Quick commands to run backend development, database sync, and tests.
 
-.PHONY: dev sync test test-unit test-integration test-fuzz test-load help
+.PHONY: dev sync test-search test-search-unit test-search-integration test-search-fuzz test-search-load help
 
 help:
 	@echo "========================================================================="
 	@echo "  Backend CLI Commands Makefile"
 	@echo "========================================================================="
-	@echo "  make dev              - Start the development server (auto-reload)"
-	@echo "  make sync             - Sync Database schemas (Sequelize migration)"
-	@echo "  make test             - Run ALL tests (Unit, Integration, Fuzz)"
-	@echo "  make test-unit        - Run ONLY Unit Tests"
-	@echo "  make test-integration - Run ONLY Integration Tests (Database required)"
-	@echo "  make test-fuzz        - Run ONLY Fuzz Tests"
-	@echo "  make test-load        - Run API Load/Stress Test"
+	@echo "  make test-search             - Run ALL UC03 Transaction Search tests"
+	@echo "  make test-search-unit        - Run ONLY UC03 Search Unit Test"
+	@echo "  make test-search-integration - Run ONLY UC03 Search Integration Test"
+	@echo "  make test-search-fuzz        - Run ONLY UC03 Search Fuzz Test"
+	@echo "  make test-search-load        - Run ONLY UC03 Search Load/Stress Test"
 	@echo "========================================================================="
 
 dev:
@@ -23,17 +21,18 @@ dev:
 sync:
 	npm run sync
 
-test:
-	npm run test
+# --- Specific UC03 Transaction Search tests (Dang Viet Hung) ---
+test-search:
+	npx cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit/transaction.service.unit.test.ts tests/integration/transaction.service.integration.test.ts tests/fuzz/transaction.service.fuzz.test.ts
 
-test-unit:
-	npm run test:unit
+test-search-unit:
+	npx cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit/transaction.service.unit.test.ts
 
-test-integration:
-	npm run test:integration
+test-search-integration:
+	npx cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration/transaction.service.integration.test.ts
 
-test-fuzz:
-	npm run test:fuzz
+test-search-fuzz:
+	npx cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/fuzz/transaction.service.fuzz.test.ts
 
-test-load:
-	npm run test:load
+test-search-load:
+	npx tsx tests/load/search.load.ts

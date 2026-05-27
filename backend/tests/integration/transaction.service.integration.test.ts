@@ -4,42 +4,83 @@ import User from "../../src/database/models/User.js";
 import Category from "../../src/database/models/Category.js";
 import Budget from "../../src/database/models/Budget.js";
 import sequelize from "../../src/config/database.js";
-import { mockSearchFilters } from "../mocks/transaction.mock.js";
-import { SearchTransactionSchema } from "../../src/core/dtos/transaction.dto.js";
+import app from "../../src/app.js";
+import { AuthService } from "../../src/core/services/auth.service.js";
+import type { Server } from "http";
 
-describe("TransactionService - Integration Test - searchTransactions", () => {
+describe("TransactionService - API Integration Test - searchTransactions", () => {
+    let server: Server;
+    let baseURL: string;
+    let token: string;
     let testUserId: number;
     let testCategoryIncomeId: number;
     let testCategoryExpenseId: number;
     let createdTransactionIds: number[] = [];
     let testBudgetId: number;
+    let testUserEmail: string;
+    const testUserPassword = "Password123!";
 
     beforeAll(async () => {
-        // Authenticate database connection
+        // Khởi động kết nối CSDL MySQL thật
         await sequelize.authenticate();
 
-        // 1. Create a test user
-        const user = await User.create({
-            username: `testuser_${Date.now()}`,
-            email: `test_${Date.now()}@example.com`,
-            password: "hashedpassword123"
+        // 1. Tạo tài khoản test ngẫu nhiên qua AuthService để mã hóa mật khẩu chính xác
+        testUserEmail = `integration_${Date.now()}@example.com`;
+        const user = await AuthService.registerUser({
+            username: `integration_${Date.now()}`,
+            email: testUserEmail,
+            password: testUserPassword
         });
         testUserId = user.id;
 
-        // 2. Create test categories
+        // 2. Khởi động server Express động trên port ngẫu nhiên
+        server = app.listen(0, () => {
+            const address = server.address();
+            if (address && typeof address !== 'string') {
+                baseURL = `http://localhost:${address.port}`;
+            }
+        });
+
+        // Đợi baseURL được gán cổng
+        await new Promise<void>((resolve) => {
+            const check = () => {
+                if (baseURL) resolve();
+                else setTimeout(check, 10);
+            };
+            check();
+        });
+
+        // 3. Đăng nhập qua API lấy Token
+        const loginResponse = await fetch(`${baseURL}/api/v1/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: testUserEmail,
+                password: testUserPassword
+            })
+        });
+        const loginResult = await loginResponse.json() as any;
+        if (!loginResponse.ok || !loginResult.success) {
+            throw new Error(`Đăng nhập test integration thất bại: ${JSON.stringify(loginResult)}`);
+        }
+        token = loginResult.data.accessToken;
+
+        // 4. Tạo các danh mục test
         const catIncome = await Category.create({
             name: `Test Income ${Date.now()}`,
-            type: "INCOME"
+            type: "INCOME",
+            userId: testUserId
         });
         testCategoryIncomeId = catIncome.id;
 
         const catExpense = await Category.create({
             name: `Test Expense ${Date.now()}`,
-            type: "EXPENSE"
+            type: "EXPENSE",
+            userId: testUserId
         });
         testCategoryExpenseId = catExpense.id;
 
-        // 3. Create Budget
+        // 5. Tạo ngân sách test
         const budget = await Budget.create({
             userId: testUserId,
             categoryId: testCategoryExpenseId,
@@ -49,7 +90,7 @@ describe("TransactionService - Integration Test - searchTransactions", () => {
         });
         testBudgetId = budget.id;
 
-        // 4. Create sample records for testing
+        // 6. Tạo các giao dịch ảo làm dữ liệu mẫu
         const t1 = await Transaction.create({
             userId: testUserId,
             amount: 500000,
@@ -71,72 +112,135 @@ describe("TransactionService - Integration Test - searchTransactions", () => {
     });
 
     afterAll(async () => {
-        // Cleanup test data in reverse order of creation
+        // Dọn dẹp dữ liệu ảo ngược thứ tự tạo
         await Transaction.destroy({ where: { id: createdTransactionIds } });
         await Budget.destroy({ where: { id: testBudgetId } });
         await Category.destroy({ where: { id: [testCategoryIncomeId, testCategoryExpenseId] } });
         await User.destroy({ where: { id: testUserId } });
         
-        // Cần thiết để ngắt kết nối
+        // Đóng server Express
+        if (server) {
+            await new Promise<void>((resolve) => server.close(() => resolve()));
+        }
+
+        // Đóng kết nối DB
         await sequelize.close();
     });
 
-    it("nên trả về dữ liệu thật từ database khi query với search filter rỗng", async () => {
-        const result = await TransactionService.searchTransactions(testUserId, {});
+    it("TC01: nên trả về dữ liệu thật từ database khi query với search filter rỗng", async () => {
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({})
+        });
 
-        expect(result.length).toBeGreaterThanOrEqual(2);
-        const descriptions = result.map(t => t.description);
+        expect(response.status).toBe(200);
+        const result = await response.json() as any;
+        expect(result.success).toBe(true);
+        expect(result.data.length).toBeGreaterThanOrEqual(2);
+        
+        const descriptions = result.data.map((t: any) => t.description);
         expect(descriptions).toContain("Junk Lương Test");
         expect(descriptions).toContain("Junk Mua sắm Test");
     });
 
-    it("nên lọc đúng dữ liệu dựa theo description (search string)", async () => {
-        const result = await TransactionService.searchTransactions(testUserId, { search: "Lương" });
-
-        expect(result.length).toBeGreaterThanOrEqual(1);
-        if (result[0]) {
-            expect(result[0].description).toContain("Lương");
-        }
-    });
-
-    it("nên lọc đúng dữ liệu theo type = EXPENSE", async () => {
-        const result = await TransactionService.searchTransactions(testUserId, { type: "EXPENSE" });
-
-        expect(result.length).toBeGreaterThanOrEqual(1);
-        expect(result.every(t => t.type === "EXPENSE")).toBeTruthy();
-    });
-
-    it("nên lọc đúng dữ liệu theo type = INCOME", async () => {
-        const result = await TransactionService.searchTransactions(testUserId, { type: "INCOME" });
-
-        expect(result.length).toBeGreaterThanOrEqual(1);
-        expect(result.every(t => t.type === "INCOME")).toBeTruthy();
-    });
-
-    it("nên lọc đúng dữ liệu theo categoryId", async () => {
-        const result = await TransactionService.searchTransactions(testUserId, {
-            categoryId: testCategoryExpenseId
+    it("TC02: nên lọc đúng dữ liệu dựa theo description (search string)", async () => {
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ search: "Lương" })
         });
 
-        expect(result.length).toBeGreaterThanOrEqual(1);
-        expect(result.every(t => t.categoryId === testCategoryExpenseId)).toBeTruthy();
+        expect(response.status).toBe(200);
+        const result = await response.json() as any;
+        expect(result.success).toBe(true);
+        expect(result.data.length).toBeGreaterThanOrEqual(1);
+        expect(result.data[0].description).toContain("Lương");
     });
 
-    it("nên lọc đúng dữ liệu theo khoảng thời gian hợp lệ", async () => {
-        const result = await TransactionService.searchTransactions(testUserId, {
-            begin_date: new Date("2026-05-01"),
-            end_date: new Date("2026-05-02")
+    it("TC04: nên lọc đúng dữ liệu theo type = EXPENSE", async () => {
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ type: "EXPENSE" })
         });
 
-        expect(result.length).toBe(2);
+        expect(response.status).toBe(200);
+        const result = await response.json() as any;
+        expect(result.success).toBe(true);
+        expect(result.data.length).toBeGreaterThanOrEqual(1);
+        expect(result.data.every((t: any) => t.type === "EXPENSE")).toBeTruthy();
     });
 
-    it("BẢO MẬT (Chống IDOR): Hệ thống không được trả về giao dịch của người khác ngay cả khi truyền tham số tìm kiếm khớp", async () => {
-        // 1. Tạo một User khác để tránh vi phạm ràng buộc khóa ngoại (Foreign Key)
-        const otherUser = await User.create({
-            username: `otheruser_${Date.now()}`,
-            email: `other_${Date.now()}@example.com`,
-            password: "hashedpassword123"
+    it("TC05: nên lọc đúng dữ liệu theo type = INCOME", async () => {
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ type: "INCOME" })
+        });
+
+        expect(response.status).toBe(200);
+        const result = await response.json() as any;
+        expect(result.success).toBe(true);
+        expect(result.data.length).toBeGreaterThanOrEqual(1);
+        expect(result.data.every((t: any) => t.type === "INCOME")).toBeTruthy();
+    });
+
+    it("TC03: nên lọc đúng dữ liệu theo categoryId", async () => {
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ categoryId: testCategoryExpenseId })
+        });
+
+        expect(response.status).toBe(200);
+        const result = await response.json() as any;
+        expect(result.success).toBe(true);
+        expect(result.data.length).toBeGreaterThanOrEqual(1);
+        expect(result.data.every((t: any) => t.categoryId === testCategoryExpenseId)).toBeTruthy();
+    });
+
+    it("TC06: nên lọc đúng dữ liệu theo khoảng thời gian hợp lệ", async () => {
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                begin_date: "2026-05-01T00:00:00.000Z",
+                end_date: "2026-05-02T23:59:59.000Z"
+            })
+        });
+
+        expect(response.status).toBe(200);
+        const result = await response.json() as any;
+        expect(result.success).toBe(true);
+        expect(result.data.length).toBe(2);
+    });
+
+    it("TC19: BẢO MẬT (Chống IDOR): Hệ thống không được trả về giao dịch của người khác ngay cả khi truyền tham số tìm kiếm khớp", async () => {
+        // 1. Tạo một User khác qua AuthService
+        const otherUserEmail = `other_integration_${Date.now()}@example.com`;
+        const otherUser = await AuthService.registerUser({
+            username: `other_integration_${Date.now()}`,
+            email: otherUserEmail,
+            password: "Password123!"
         });
 
         // 2. Tạo một giao dịch thuộc về User khác này nhưng có từ khóa "Lương"
@@ -149,13 +253,24 @@ describe("TransactionService - Integration Test - searchTransactions", () => {
             date: new Date("2026-05-01")
         });
 
-        // 3. Thực hiện tìm kiếm với userId của chính mình (testUserId) và từ khóa "Lương"
-        const result = await TransactionService.searchTransactions(testUserId, { search: "Lương" });
+        // 3. Thực hiện tìm kiếm bằng token của chính mình (testUser) với từ khóa "Lương"
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ search: "Lương" })
+        });
+
+        expect(response.status).toBe(200);
+        const result = await response.json() as any;
+        expect(result.success).toBe(true);
 
         // Kết quả kỳ vọng: 
         // 1. Tìm thấy giao dịch "Junk Lương Test" của chính mình.
         // 2. Tuyệt đối KHÔNG tìm thấy giao dịch "Junk Lương của người khác" (IDOR được ngăn chặn).
-        const descriptions = result.map(t => t.description);
+        const descriptions = result.data.map((t: any) => t.description);
         expect(descriptions).toContain("Junk Lương Test");
         expect(descriptions).not.toContain("Junk Lương của người khác");
 
@@ -164,56 +279,125 @@ describe("TransactionService - Integration Test - searchTransactions", () => {
         await User.destroy({ where: { id: otherUser.id } });
     });
 
-    it("nên lọc đúng dữ liệu khi kết hợp nhiều bộ lọc cùng một lúc (Decision Table - Quy tắc 1)", async () => {
-        const result = await TransactionService.searchTransactions(testUserId, {
-            search: "Lương",
-            categoryId: testCategoryIncomeId,
-            type: "INCOME",
-            begin_date: new Date("2026-05-01"),
-            end_date: new Date("2026-05-02")
+    it("TC12: nên lọc đúng dữ liệu khi kết hợp nhiều bộ lọc cùng một lúc (Decision Table - Quy tắc 1)", async () => {
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                search: "Lương",
+                categoryId: testCategoryIncomeId,
+                type: "INCOME",
+                begin_date: "2026-05-01T00:00:00.000Z",
+                end_date: "2026-05-02T23:59:59.000Z"
+            })
         });
 
-        expect(result.length).toBe(1);
-        expect(result[0]?.description).toContain("Lương");
-        expect(result[0]?.categoryId).toBe(testCategoryIncomeId);
-        expect(result[0]?.type).toBe("INCOME");
+        expect(response.status).toBe(200);
+        const result = await response.json() as any;
+        expect(result.success).toBe(true);
+        expect(result.data.length).toBe(1);
+        expect(result.data[0].description).toContain("Lương");
+        expect(result.data[0].categoryId).toBe(testCategoryIncomeId);
+        expect(result.data[0].type).toBe("INCOME");
     });
 
-    it("TC06: nên trả về mảng rỗng khi tìm kiếm với từ khóa không tồn tại", async () => {
-        const result = await TransactionService.searchTransactions(testUserId, { search: "abcxyz" });
-        expect(result.length).toBe(0);
+    it("TC11: nên trả về mảng rỗng khi tìm kiếm với từ khóa không tồn tại", async () => {
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ search: "abcxyz" })
+        });
+
+        expect(response.status).toBe(200);
+        const result = await response.json() as any;
+        expect(result.success).toBe(true);
+        expect(result.data.length).toBe(0);
     });
 
-    it("TC07: nên báo lỗi khi ngày bắt đầu lớn hơn ngày kết thúc", async () => {
-        const invalidFilter = {
-            begin_date: new Date("2026-05-03"),
-            end_date: new Date("2026-05-01")
-        };
-        await expect(SearchTransactionSchema.parseAsync(invalidFilter))
-            .rejects
-            .toThrow("Ngày kết thúc phải >= ngày bắt đầu");
+    it("TC16: nên báo lỗi khi ngày bắt đầu lớn hơn ngày kết thúc", async () => {
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                begin_date: "2026-05-03",
+                end_date: "2026-05-01"
+            })
+        });
+
+        expect(response.status).toBe(400);
+        const result = await response.json() as any;
+        expect(result.success).toBe(false);
+        expect(result.message).toContain("Ngày kết thúc phải >= ngày bắt đầu");
     });
 
-    it("TC08: nên báo lỗi khi ID danh mục âm (-1)", async () => {
-        const invalidFilter = {
-            categoryId: -1
-        };
-        await expect(SearchTransactionSchema.parseAsync(invalidFilter))
-            .rejects
-            .toThrow("ID danh mục phải là số nguyên dương");
+    it("TC14: nên báo lỗi khi ID danh mục âm (-1)", async () => {
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ categoryId: -1 })
+        });
+
+        expect(response.status).toBe(400);
+        const result = await response.json() as any;
+        expect(result.success).toBe(false);
+        expect(result.message).toContain("ID danh mục phải là số nguyên dương");
     });
 
-    it("TC09: nên trả về mảng rỗng và không crash khi tìm kiếm ký tự đặc biệt", async () => {
-        const result = await TransactionService.searchTransactions(testUserId, { search: "@@@@" });
-        expect(result.length).toBe(0);
+    it("TC15: nên báo lỗi khi loại giao dịch không hợp lệ (type = INVALID_TYPE)", async () => {
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ type: "abc" })
+        });
+
+        expect(response.status).toBe(400);
+        const result = await response.json() as any;
+        expect(result.success).toBe(false);
     });
 
-    it("TC10: nên báo lỗi khi kiểu sắp xếp không hợp lệ", async () => {
-        const invalidFilter = {
-            sort: "abc" as any
-        };
-        await expect(SearchTransactionSchema.parseAsync(invalidFilter))
-            .rejects
-            .toThrow();
+    it("TC13: nên trả về mảng rỗng và không crash khi tìm kiếm ký tự đặc biệt", async () => {
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ search: "@@@@" })
+        });
+
+        expect(response.status).toBe(200);
+        const result = await response.json() as any;
+        expect(result.success).toBe(true);
+        expect(result.data.length).toBe(0);
+    });
+
+    it("TC17: nên báo lỗi khi kiểu sắp xếp không hợp lệ", async () => {
+        const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ sort: "abc" })
+        });
+
+        expect(response.status).toBe(400);
+        const result = await response.json() as any;
+        expect(result.success).toBe(false);
     });
 });
