@@ -56,10 +56,12 @@ export class BudgetService {
   static async checkBudgetAlert(userId: number, categoryId: number, month: number, year: number) {
     const budget = await BudgetRepository.getBudgetByCategory(userId, categoryId, month, year);
     
-    if (!budget) return null; 
+    if (!budget || !budget.amount || budget.amount <= 0) {
+      return null;
+    }
 
     const totalSpent = await BudgetRepository.getSpentAmount({ userId, categoryId, month, year });
-    const percentage = (totalSpent / budget.amount) * 100;
+    const percentage = Number(((totalSpent / budget.amount) * 100).toFixed(2));
 
     if (percentage >= 100) {
       return { 

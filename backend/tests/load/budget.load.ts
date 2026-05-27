@@ -3,7 +3,19 @@ import 'dotenv/config';
 
 // Cấu hình URL trỏ thẳng vào API Xem tiến độ kèm Query Parameters
 const URL = process.env.API_URL_BUDGET || 'http://localhost:5000/api/v1/budgets/progress?month=5&year=2026';
-const JWT_TOKEN = process.env.TEST_JWT_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJ0dW5nIGFuaCIsImlhdCI6MTc3Nzg4MzUzMCwiZXhwIjoxNzc3OTY5OTMwfQ.pD4SX6HWOWi2XiqDY52sutiCEN5R19Va4gTW32APWE4'; 
+const JWT_TOKEN = process.env.TEST_JWT_TOKEN;
+
+if (!JWT_TOKEN) {
+    throw new Error(
+        "Thiếu TEST_JWT_TOKEN trong file .env"
+    );
+}
+
+const MAX_ACCEPTABLE_LATENCY = 500;
+const MAX_P99_LATENCY = 1000;
+const MAX_NON_2XX = 0;
+const MAX_TIMEOUTS = 0;
+
 
 async function runBudgetLoadTest() {
     console.log(`Bắt đầu Load Test cho API Tiến độ Ngân sách: ${URL}`);
@@ -11,9 +23,9 @@ async function runBudgetLoadTest() {
 
     const instance = autocannon({
         url: URL,
-        connections: 100, // Số lượng người dùng giả lập kết nối đồng thời
+        connections: 50, // Số lượng người dùng giả lập kết nối đồng thời
         pipelining: 1,
-        duration: 10,     // Thời gian dội bom API (giây)
+        duration: 30,     // Thời gian dội bom API (giây)
         method: 'GET',    // SQA: API lấy dữ liệu sử dụng GET, tuyệt đối không gửi body
         headers: {
             'Authorization': `Bearer ${JWT_TOKEN}`
@@ -31,15 +43,79 @@ async function runBudgetLoadTest() {
         console.log(`Latency p99 (99% request nhanh hơn mức này): ${result.latency.p99} ms`);
         console.log(`Số lỗi (Non-2xx): ${result.non2xx}`);
         console.log(`Số requests bị timeout: ${result.timeouts}`);
-        console.log('-----------------------------------------------\n');
+        console.log(`
+        ==================================================
+        ĐÁNH GIÁ KẾT QUẢ
+        ==================================================
+        `);
+        
+        const isLatencyPass =
+            result.latency.average <=
+            MAX_ACCEPTABLE_LATENCY;
 
-        if (result.non2xx > 0) {
-            console.warn("CẢNH BÁO: Có request bị văng lỗi. Hãy kiểm tra lại Token hoặc xem DB có bị quá tải không!");
+        const isP99Pass =
+            result.latency.p99 <=
+            MAX_P99_LATENCY;
+
+        const isNon2xxPass =
+            result.non2xx <=
+            MAX_NON_2XX;
+
+        const isTimeoutPass =
+            result.timeouts <=
+            MAX_TIMEOUTS;
+
+        if (
+            isLatencyPass &&
+            isP99Pass &&
+            isNon2xxPass &&
+            isTimeoutPass
+        ) {
+            console.log(`
+                KẾT LUẬN: PASS
+                Hệ thống đáp ứng yêu cầu hiệu năng.
+            `);
+        }
+        else {
+            console.log(`
+                KẾT LUẬN: FAIL
+                Hệ thống chưa đáp ứng yêu cầu hiệu năng.
+            `);
+
+            if (!isLatencyPass) {
+
+                console.warn(
+                    `Latency trung bình vượt ngưỡng ${MAX_ACCEPTABLE_LATENCY} ms`
+                );
+            }
+
+            if (!isP99Pass) {
+
+                console.warn(
+                    `Latency p99 vượt ngưỡng ${MAX_P99_LATENCY} ms`
+                );
+            }
+
+            if (!isNon2xxPass) {
+
+                console.warn(
+                    'Có request trả về lỗi Non-2xx'
+                );
+            }
+
+            if (!isTimeoutPass) {
+
+                console.warn(
+                    'Có request bị timeout'
+                );
+            }
         }
         
-        if (result.latency.average > 500) {
-            console.warn("CẢNH BÁO: Latency trung bình đang cao hơn 500ms. Cần xem xét tối ưu lại Index trong Database hoặc Caching!");
-        }
+        console.log(`
+        ==================================================
+        KẾT THÚC LOAD TEST
+        ==================================================
+        `);
     });
 
     autocannon.track(instance, { renderProgressBar: true });

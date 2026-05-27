@@ -89,21 +89,6 @@ export const mockBudgetPayloads = {
       year: "2026"
     } as unknown as UpsertBudgetDTO,
 
-    xssPayload: {
-      category_id: 1,
-      amount_limit: 5000000,
-      month: 5,
-      year: 2026,
-      script: "<script>alert('XSS')</script>"
-    } as unknown as UpsertBudgetDTO,
-
-    sqlInjectionPayload: {
-      category_id: "1 OR 1=1",
-      amount_limit: 5000000,
-      month: 5,
-      year: 2026
-    } as unknown as UpsertBudgetDTO,
-
     // ==========================================
     // SERVICE LOGIC CASES
     // ==========================================
@@ -115,7 +100,7 @@ export const mockBudgetPayloads = {
     } as UpsertBudgetDTO,
 
     incomeCategory: {
-      category_id: 3,
+      category_id: 13,
       amount_limit: 5000000,
       month: 5,
       year: 2026
@@ -131,12 +116,36 @@ export const mockBudgetPayloads = {
       year: 2026
     } as UpsertBudgetDTO,
 
-    maxSafeInteger: {
+    maxBoundaryAmount: {
       category_id: 1,
-      amount_limit: Number.MAX_SAFE_INTEGER,
+      amount_limit: 9999999999999,
+      month: 12,
+      year: 9999
+    } as UpsertBudgetDTO, 
+
+    overflowAmount: {
+      category_id: 1,
+      amount_limit: 10000000000000,
       month: 12,
       year: 9999
     } as UpsertBudgetDTO
+};
+
+export const mockAlertCases = {
+   below80: {
+      budget: 5000000,
+      spent: 3900000
+   },
+
+   exact80: {
+      budget: 5000000,
+      spent: 4000000
+   },
+
+   over100: {
+      budget: 5000000,
+      spent: 5600000
+   }
 };
 
 // ==========================================

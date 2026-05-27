@@ -1,39 +1,92 @@
-# Makefile for Backend Personal Finance Manager
-# Author: Dang Viet Hung (UC03)
-# Description: Quick commands to run backend development, database sync, and tests.
+# ==========================================
+# PERSONAL FINANCE MANAGER - TEST MAKEFILE
+# ==========================================
 
-.PHONY: dev sync test test-unit test-integration test-fuzz test-load help
+.PHONY: help dev test test-unit test-integration test-fuzz test-load test-all install clean
+
+# ==========================================
+# DEFAULT
+# ==========================================
 
 help:
-	@echo "========================================================================="
-	@echo "  Backend CLI Commands Makefile"
-	@echo "========================================================================="
-	@echo "  make dev              - Start the development server (auto-reload)"
-	@echo "  make sync             - Sync Database schemas (Sequelize migration)"
-	@echo "  make test             - Run ALL tests (Unit, Integration, Fuzz)"
-	@echo "  make test-unit        - Run ONLY Unit Tests"
-	@echo "  make test-integration - Run ONLY Integration Tests (Database required)"
-	@echo "  make test-fuzz        - Run ONLY Fuzz Tests"
-	@echo "  make test-load        - Run API Load/Stress Test"
-	@echo "========================================================================="
+	@echo "====================================="
+	@echo " PERSONAL FINANCE MANAGER - COMMANDS "
+	@echo "====================================="
+	@echo "make install           - Cai dependencies"
+	@echo "make dev               - Chay backend"
+	@echo "make test-unit         - Chay Unit Test"
+	@echo "make test-integration  - Chay Integration Test"
+	@echo "make test-fuzz         - Chay Fuzz Test"
+	@echo "make test-load         - Chay Load Test"
+	@echo "make test-all          - Chay toan bo test"
+	@echo "make clean             - Xoa cache"
+	@echo "====================================="
+
+
+# ==========================================
+# INSTALL
+# ==========================================
+
+install:
+	npm install
+
+
+# ==========================================
+# RUN BACKEND
+# ==========================================
 
 dev:
 	npm run dev
 
-sync:
-	npm run sync
 
-test:
-	npm run test
+# ==========================================
+# UNIT TEST
+# ==========================================
 
 test-unit:
 	npm run test:unit
 
+
+# ==========================================
+# INTEGRATION TEST
+# ==========================================
+
 test-integration:
 	npm run test:integration
+
+
+# ==========================================
+# FUZZ TEST
+# ==========================================
 
 test-fuzz:
 	npm run test:fuzz
 
+
+# ==========================================
+# LOAD TEST
+# ==========================================
+
 test-load:
 	npm run test:load
+
+
+# ==========================================
+# RUN ALL TESTS
+# ==========================================
+
+test-all:
+	npm run test:unit
+	npm run test:integration
+	npm run test:fuzz
+	npm run test:load
+
+
+# ==========================================
+# CLEAN CACHE
+# ==========================================
+
+clean:
+	rm -rf node_modules
+	rm -rf coverage
+	rm -rf .jest-cache

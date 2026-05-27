@@ -3,14 +3,16 @@
   "type": "module",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {
+ "scripts": {
     "dev": "tsx watch src/server.ts",
-    "sync": "tsx sync.ts",
+
     "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit",
+
     "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration",
+
     "test:fuzz": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/fuzz",
-    "test:load": "tsx tests/load/search.load.ts",
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest"
+
+    "test:load": "tsx tests/load/budget.load.ts"
   },
   "keywords": [],
   "author": "",
