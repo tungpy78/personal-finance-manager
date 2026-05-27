@@ -8,11 +8,13 @@
 
     "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit",
 
-    "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration",
+    "test:budget:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration/budget.integration.test.ts",
 
-    "test:fuzz": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/fuzz",
+    "test:budget:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit/budget.unit.test.ts",
 
-    "test:load": "tsx tests/load/budget.load.ts"
+    "test:budget:fuzz": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/fuzz/budget.fuzz.test.ts",
+
+    "test:budget": "npm run test:budget:unit && npm run test:budget:integration && npm run test:budget:fuzz"
   },
   "keywords": [],
   "author": "",

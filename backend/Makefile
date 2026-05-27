@@ -1,92 +1,59 @@
 # ==========================================
-# PERSONAL FINANCE MANAGER - TEST MAKEFILE
+# BUDGET TEST MAKEFILE
 # ==========================================
 
-.PHONY: help dev test test-unit test-integration test-fuzz test-load test-all install clean
-
-# ==========================================
-# DEFAULT
-# ==========================================
+.PHONY: help unit integration fuzz load all
 
 help:
-	@echo "====================================="
-	@echo " PERSONAL FINANCE MANAGER - COMMANDS "
-	@echo "====================================="
-	@echo "make install           - Cai dependencies"
-	@echo "make dev               - Chay backend"
-	@echo "make test-unit         - Chay Unit Test"
-	@echo "make test-integration  - Chay Integration Test"
-	@echo "make test-fuzz         - Chay Fuzz Test"
-	@echo "make test-load         - Chay Load Test"
-	@echo "make test-all          - Chay toan bo test"
-	@echo "make clean             - Xoa cache"
-	@echo "====================================="
-
-
-# ==========================================
-# INSTALL
-# ==========================================
-
-install:
-	npm install
-
-
-# ==========================================
-# RUN BACKEND
-# ==========================================
-
-dev:
-	npm run dev
+	@echo "================================="
+	@echo " BUDGET TEST COMMANDS "
+	@echo "================================="
+	@echo "make unit         - Budget Unit Test"
+	@echo "make integration  - Budget Integration Test"
+	@echo "make fuzz         - Budget Fuzz Test"
+	@echo "make load         - Budget Load Test"
+	@echo "make all          - Run All Budget Tests"
+	@echo "================================="
 
 
 # ==========================================
 # UNIT TEST
 # ==========================================
 
-test-unit:
-	npm run test:unit
+unit:
+	npx jest tests/unit/budget.unit.test.ts
 
 
 # ==========================================
 # INTEGRATION TEST
 # ==========================================
 
-test-integration:
-	npm run test:integration
+integration:
+	npx jest tests/integration/budget.integration.test.ts
 
 
 # ==========================================
 # FUZZ TEST
 # ==========================================
 
-test-fuzz:
-	npm run test:fuzz
+fuzz:
+	npx jest tests/fuzz/budget.fuzz.test.ts
 
 
 # ==========================================
 # LOAD TEST
 # ==========================================
 
-test-load:
-	npm run test:load
+load:
+	npx tsx tests/load/budget.load.ts
 
 
 # ==========================================
-# RUN ALL TESTS
+# RUN ALL
 # ==========================================
 
-test-all:
-	npm run test:unit
-	npm run test:integration
-	npm run test:fuzz
-	npm run test:load
-
-
-# ==========================================
-# CLEAN CACHE
-# ==========================================
-
-clean:
-	rm -rf node_modules
-	rm -rf coverage
-	rm -rf .jest-cache
+all:
+	npx jest tests/unit/budget.unit.test.ts
+	npx jest tests/integration/budget.integration.test.ts
+	npx jest tests/fuzz/budget.fuzz.test.ts
+	npx tsx tests/load/budget.load.ts

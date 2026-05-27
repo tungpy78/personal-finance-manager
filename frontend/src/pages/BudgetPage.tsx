@@ -37,26 +37,15 @@ import type { Transaction } from '../types/transaction.type';
 const { Title, Text } = Typography;
 
 const BudgetPage = () => {
-    const [month, setMonth] = useState<number>(
-        new Date().getMonth() + 1
-    );
+    const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
+    const [year, setYear] = useState<number>(new Date().getFullYear());
 
-    const [year, setYear] = useState<number>(
-        new Date().getFullYear()
-    );
-
-    const [progressList, setProgressList] = useState<
-        BudgetProgress[]
-    >([]);
-
+    const [progressList, setProgressList] = useState<BudgetProgress[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
 
     const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
-
     const [loading, setLoading] = useState(false);
-
     const [isModalOpen, setIsModalOpen] = useState(false);
-
     const [form] = Form.useForm();
 
     const {
@@ -64,12 +53,9 @@ const BudgetPage = () => {
         totalExpense,
         currentBalance
     } = useMemo(() => {
-
         let income = 0;
         let expense = 0;
-
         filteredTransactions.forEach((item) => {
-
             if (item.type === 'INCOME') {
                 income += Number(item.amount);
             }
@@ -84,7 +70,6 @@ const BudgetPage = () => {
             totalExpense: expense,
             currentBalance: income - expense
         };
-
     }, [filteredTransactions]);
 
     const getProgressColor = (percent: number) => {
@@ -93,17 +78,11 @@ const BudgetPage = () => {
         return '#52c41a';
     };
 
-    // =========================================================
-    // FETCH DATA
-    // =========================================================
-
     const fetchBudgetData = useCallback(
         async (currentMonth: number, currentYear: number) => {
             try {
                 setLoading(true);
-
-                const [budgetRes, transactionRes] =
-                    await Promise.all([
+                const [budgetRes, transactionRes] =await Promise.all([
                         budgetApi.getBudgetProgress(
                             currentMonth,
                             currentYear
@@ -114,43 +93,25 @@ const BudgetPage = () => {
                 // =========================
                 // Budget Progress
                 // =========================
-
-                const budgetData =
-                    budgetRes?.data?.data ||
-                    budgetRes?.data ||
-                    [];
-
+                const budgetData = budgetRes?.data?.data || budgetRes?.data || [];
                 setProgressList(budgetData);
 
                 // =========================
                 // Transaction Filter
                 // =========================
-
-                const txData =
-                    transactionRes?.data ||
-                    [];
+                const txData =transactionRes?.data || [];
 
                 const filtered = txData.filter(
                     (tx: Transaction) => {
                         const txDate = new Date(tx.date);
-
-                        return (
-                            txDate.getMonth() + 1 ===
-                                currentMonth &&
-                            txDate.getFullYear() ===
-                                currentYear
-                        );
+                        return ( txDate.getMonth() + 1 === currentMonth && txDate.getFullYear() ===currentYear);
                     }
                 );
 
                 setFilteredTransactions(filtered);
-
             } catch (error: unknown) {
                 if (error instanceof Error) {
-                    message.error(
-                        error.message ||
-                            'Lỗi tải dữ liệu ngân sách'
-                    );
+                    message.error( error.message || 'Lỗi tải dữ liệu ngân sách' );
                 }
             } finally {
                 setLoading(false);
@@ -165,11 +126,8 @@ const BudgetPage = () => {
 
     const fetchCategories = useCallback(async () => {
         try {
-            const response =
-                await categoryApi.getAll() as unknown as { data: Category[] };
-
-            const list =
-                response?.data || [];
+            const response = await categoryApi.getAll() as unknown as { data: Category[] };
+            const list = response?.data || [];
 
             const expenseCategories = list.filter(
                 (c: Category) =>
@@ -177,7 +135,6 @@ const BudgetPage = () => {
             );
 
             setCategories(expenseCategories);
-
         } catch (error) {
             console.error(error);
         }
@@ -190,35 +147,27 @@ const BudgetPage = () => {
     useEffect(() => {
         let isMounted = true;
 
-        const loadData = async () => {
-
+        const loadData = async () => { 
             await Promise.resolve();
-
             if (isMounted) {
                 await fetchBudgetData(month, year);
             }
         };
-
         loadData();
 
         return () => {
             isMounted = false;
         };
-
     }, [month, year, fetchBudgetData]);
 
     useEffect(() => {
         let isMounted = true;
-
         const loadCategories = async () => {
-
             await Promise.resolve();
-
             if (isMounted) {
                 await fetchCategories();
             }
         };
-
         loadCategories();
 
         return () => {
@@ -232,18 +181,13 @@ const BudgetPage = () => {
     // =========================================================
 
     const handleAdd = () => {
-        form.setFieldsValue({
-            month,
-            year
-        });
-
+        form.setFieldsValue({ month, year });
         setIsModalOpen(true);
     };
 
     const handleModalOk = async () => {
         try {
-            const values =
-                await form.validateFields();
+            const values = await form.validateFields();
 
             await budgetApi.setupBudget({
                 category_id: values.category_id,
@@ -252,22 +196,13 @@ const BudgetPage = () => {
                 year: values.year
             });
 
-            message.success(
-                'Thiết lập ngân sách thành công'
-            );
-
+            message.success( 'Thiết lập ngân sách thành công' );
             setIsModalOpen(false);
-
             form.resetFields();
-
             fetchBudgetData(month, year);
-
         } catch (error: unknown) {
-            if (error instanceof Error) {
-                message.error(
-                    error.message ||
-                        'Đã có lỗi xảy ra'
-                );
+            if (error instanceof Error) { 
+                message.error( error.message || 'Đã có lỗi xảy ra' );
             }
         }
     };
@@ -281,8 +216,7 @@ const BudgetPage = () => {
             <div
                 style={{
                     display: 'flex',
-                    justifyContent:
-                        'space-between',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
                     marginBottom: 24
                 }}
@@ -306,9 +240,7 @@ const BudgetPage = () => {
                     icon={<PlusOutlined />}
                     size="large"
                     onClick={handleAdd}
-                    style={{
-                        borderRadius: 8
-                    }}
+                    style={{ borderRadius: 8 }}
                 >
                     Thiết lập ngân sách
                 </Button>
@@ -323,25 +255,18 @@ const BudgetPage = () => {
                 style={{
                     marginBottom: 24,
                     borderRadius: 12,
-                    boxShadow:
-                        '0 4px 12px rgba(0,0,0,0.05)'
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
                 }}
             >
                 <Space size="large">
                     <Space>
-                        <Text strong>
-                            Tháng:
-                        </Text>
+                        <Text strong> Tháng: </Text>
 
                         <Select
                             value={month}
                             onChange={setMonth}
-                            style={{
-                                width: 120
-                            }}
-                            options={Array.from(
-                                { length: 12 },
-                                (_, i) => ({
+                            style={{ width: 120 }}
+                            options={Array.from( { length: 12 }, (_, i) => ({
                                     value: i + 1,
                                     label: `Tháng ${i + 1}`
                                 })
@@ -350,17 +275,12 @@ const BudgetPage = () => {
                     </Space>
 
                     <Space>
-                        <Text strong>
-                            Năm:
-                        </Text>
+                        <Text strong>Năm:</Text>
 
                         <InputNumber
                             value={year}
                             onChange={(val) =>
-                                setYear(
-                                    val ||
-                                        new Date().getFullYear()
-                                )
+                                setYear(val || new Date().getFullYear())
                             }
                         />
                     </Space>
@@ -387,9 +307,7 @@ const BudgetPage = () => {
                             title={`Tổng thu tháng ${month}`}
                             value={totalIncome}
                             precision={0}
-                            valueStyle={{
-                                color: '#3f8600'
-                            }}
+                            valueStyle={{ color: '#3f8600' }}
                             prefix={<ArrowUpOutlined />}
                             suffix="đ"
                         />
@@ -408,9 +326,7 @@ const BudgetPage = () => {
                             title={`Tổng chi tháng ${month}`}
                             value={totalExpense}
                             precision={0}
-                            valueStyle={{
-                                color: '#cf1322'
-                            }}
+                            valueStyle={{ color: '#cf1322' }}
                             prefix={<ArrowDownOutlined />}
                             suffix="đ"
                         />
@@ -429,12 +345,7 @@ const BudgetPage = () => {
                             title="Số dư"
                             value={currentBalance}
                             precision={0}
-                            valueStyle={{
-                                color:
-                                    currentBalance >= 0
-                                        ? '#1677ff'
-                                        : '#cf1322'
-                            }}
+                            valueStyle={{ color: currentBalance >= 0 ? '#1677ff' : '#cf1322' }}
                             prefix={<WalletOutlined />}
                             suffix="đ"
                         />
@@ -449,12 +360,9 @@ const BudgetPage = () => {
 
                 <Title
                     level={4}
-                    style={{
-                        marginBottom: 16
-                    }}
+                    style={{ marginBottom: 16 }}
                 >
-                    <WalletOutlined /> Theo dõi
-                    hạn mức
+                    <WalletOutlined /> Theo dõi hạn mức
                 </Title>
 
                 {progressList.length === 0 ? (
@@ -462,9 +370,7 @@ const BudgetPage = () => {
                 ) : (
                     <Row
                         gutter={[16, 16]}
-                        style={{
-                            marginBottom: 32
-                        }}
+                        style={{ marginBottom: 32 }}
                     >
                         {progressList.map(
                             (budget) => (
@@ -478,12 +384,9 @@ const BudgetPage = () => {
                                         bordered={false}
                                         style={{
                                             borderRadius: 12,
-                                            boxShadow:
-                                                '0 4px 12px rgba(0,0,0,0.05)',
-
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                                             borderLeft:
-                                                budget.percentage >=
-                                                80
+                                                budget.percentage >= 80
                                                     ? `6px solid ${getProgressColor(
                                                           budget.percentage
                                                       )}`
@@ -492,103 +395,56 @@ const BudgetPage = () => {
                                     >
                                         <div
                                             style={{
-                                                display:
-                                                    'flex',
-
-                                                justifyContent:
-                                                    'space-between',
-
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
                                                 marginBottom: 12
                                             }}
                                         >
                                             <Text
                                                 strong
-                                                style={{
-                                                    fontSize: 16
-                                                }}
+                                                style={{ fontSize: 16 }}
                                             >
-                                                {budget
-                                                    .category
-                                                    ?.name ||
-                                                    String(
-                                                        budget.category
-                                                    ) ||
-                                                    'Không xác định'}
+                                                {budget.category?.name || String(budget.category) || 'Không xác định'}
                                             </Text>
 
-                                            {budget.percentage >=
-                                                80 && (
+                                            {budget.percentage >= 80 && (
                                                 <Tag
                                                     color={
-                                                        budget.percentage >=
-                                                        100
-                                                            ? 'red'
-                                                            : 'warning'
+                                                        budget.percentage >= 100 ? 'red' : 'warning'
                                                     }
-                                                    icon={
-                                                        <AlertOutlined />
-                                                    }
+                                                    icon={ <AlertOutlined /> }
                                                 >
-                                                    {budget.percentage >=
-                                                    100
-                                                        ? 'VƯỢT MỨC'
-                                                        : 'CẢNH BÁO'}
+                                                    {budget.percentage >= 100 ? 'VƯỢT MỨC' : 'CẢNH BÁO'}
                                                 </Tag>
                                             )}
                                         </div>
 
                                         <div
                                             style={{
-                                                display:
-                                                    'flex',
-
-                                                justifyContent:
-                                                    'space-between',
-
+                                                display:'flex',
+                                                justifyContent:'space-between',
                                                 marginBottom: 8
                                             }}
                                         >
-                                            <Text type="secondary">
-                                                Đã tiêu
-                                            </Text>
+                                            <Text type="secondary">Đã tiêu</Text>
 
                                             <Text strong>
                                                 {Number(
                                                     budget.totalSpent
-                                                ).toLocaleString(
-                                                    'vi-VN'
-                                                )}{' '}
-                                                /{' '}
+                                                ).toLocaleString('vi-VN')}
+                                                {' '}/{' '}
                                                 {Number(
                                                     budget.amount
-                                                ).toLocaleString(
-                                                    'vi-VN'
-                                                )}{' '}
-                                                đ
+                                                ).toLocaleString('vi-VN')}
+                                                {' '}đ
                                             </Text>
                                         </div>
 
                                         <Progress
-                                            percent={
-                                                budget.percentage >
-                                                100
-                                                    ? 100
-                                                    : budget.percentage
-                                            }
-                                            strokeColor={getProgressColor(
-                                                budget.percentage
-                                            )}
-                                            status={
-                                                budget.percentage >=
-                                                100
-                                                    ? 'exception'
-                                                    : 'active'
-                                            }
-                                            format={(
-                                                percent
-                                            ) =>
-                                                `${percent}%`
-                                            }
+                                            percent={ budget.percentage > 100 ? 100 : budget.percentage }
+                                            strokeColor={getProgressColor( budget.percentage )}
+                                            status={ budget.percentage >= 100 ? 'exception' : 'active' }
+                                            format={(percent) =>`${percent}%`}
                                         />
                                     </Card>
                                 </Col>
@@ -616,9 +472,7 @@ const BudgetPage = () => {
                 <Form
                     form={form}
                     layout="vertical"
-                    style={{
-                        marginTop: 16
-                    }}
+                    style={{ marginTop: 16 }}
                 >
                     <Form.Item
                         name="category_id"
@@ -626,8 +480,7 @@ const BudgetPage = () => {
                         rules={[
                             {
                                 required: true,
-                                message:
-                                    'Vui lòng chọn danh mục'
+                                message: 'Vui lòng chọn danh mục'
                             }
                         ]}
                     >
@@ -651,32 +504,24 @@ const BudgetPage = () => {
                         rules={[
                             {
                                 required: true,
-                                message:
-                                    'Vui lòng nhập số tiền'
+                                message: 'Vui lòng nhập số tiền'
                             },
 
                             {
                                 type: 'number',
                                 min: 1000,
-                                message:
-                                    'Tối thiểu 1.000đ'
+                                message: 'Tối thiểu 1.000đ'
                             }
                         ]}
                     >
                         <InputNumber
-                            style={{
-                                width: '100%'
-                            }}
-                            formatter={(
-                                value
-                            ) =>
-                                `${value}`.replace(
+                            style={{width: '100%'}}
+                            formatter={(value) =>`${value}`.replace(
                                     /\B(?=(\d{3})+(?!\d))/g,
                                     ','
                                 )
                             }
-                            parser={(value) =>
-                                value!.replace(
+                            parser={(value) =>value!.replace(
                                     /\$\s?|(,*)/g,
                                     ''
                                 )
@@ -691,9 +536,7 @@ const BudgetPage = () => {
                                 name="month"
                                 label="Tháng"
                                 rules={[
-                                    {
-                                        required: true
-                                    }
+                                    {required: true}
                                 ]}
                             >
                                 <Select>
@@ -703,18 +546,10 @@ const BudgetPage = () => {
                                         },
                                         (_, i) => (
                                             <Select.Option
-                                                key={
-                                                    i +
-                                                    1
-                                                }
-                                                value={
-                                                    i +
-                                                    1
-                                                }
+                                                key={i + 1}
+                                                value={i +1}
                                             >
-                                                Tháng{' '}
-                                                {i +
-                                                    1}
+                                                Tháng{' '}{i +1}
                                             </Select.Option>
                                         )
                                     )}
@@ -727,15 +562,11 @@ const BudgetPage = () => {
                                 name="year"
                                 label="Năm"
                                 rules={[
-                                    {
-                                        required: true
-                                    }
+                                    {required: true}
                                 ]}
                             >
                                 <InputNumber
-                                    style={{
-                                        width: '100%'
-                                    }}
+                                    style={{width: '100%'}}
                                 />
                             </Form.Item>
                         </Col>
