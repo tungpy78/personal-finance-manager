@@ -21,12 +21,12 @@ Tài liệu này ghi lại chi tiết các kịch bản kiểm thử (test cases
 
 ### 2.2. Integration Test (Kiểm Thử Tích Hợp)
 - **Tệp thực thi:** `tests/integration/transaction.service.integration.test.ts`
-- **Mục tiêu:** Kiểm tra sự tương tác giữa Service Layer và Database (MySQL thông qua Sequelize). Đảm bảo các câu truy vấn ORM được sinh ra và thực thi chính xác.
-- **Phương pháp:** Kết nối tới database thực tế, đẩy (seed) một vài record rác vào database tạm thời, tiến hành query qua service và cuối cùng xóa dọn dẹp (cleanup) dữ liệu đó để không làm rác DB.
+- **Mục tiêu:** Kiểm tra tích hợp toàn diện từ đầu vào API Endpoint (`POST /api/v1/transactions/search`), đi qua các Middleware (xác thực `protect`, validate `SearchTransactionSchema`) đến Controller, Service và kết nối Database thực tế.
+- **Phương pháp:** Khởi động ứng dụng Express trên một cổng ngẫu nhiên, sử dụng Native `fetch` gửi HTTP requests thật mang JWT Token và Payload kiểm thử tới máy chủ, thực hiện truy vấn xuống CSDL MySQL thật và kiểm tra phản hồi HTTP (mã trạng thái 200, 400, dữ liệu trả về) sau đó dọn dẹp (cleanup) toàn bộ dữ liệu test.
 - **Các kịch bản (Test Cases) cụ thể:**
-  1. Truy vấn thành công dữ liệu từ DB với điều kiện filter rỗng.
-  2. Lọc chính xác thông qua mệnh đề `LIKE` của SQL (tìm kiếm mờ theo chuỗi `description`).
-  3. Lọc chính xác dữ liệu theo `type` (ví dụ: chỉ lấy loại EXPENSE).
+  1. Truy vấn thành công dữ liệu từ DB với điều kiện filter rỗng qua HTTP (HTTP 200).
+  2. Lọc chính xác thông qua mệnh đề `LIKE` của SQL (tìm kiếm mờ theo chuỗi `description`) qua HTTP (HTTP 200).
+  3. Lọc chính xác dữ liệu theo `type` (ví dụ: chỉ lấy loại EXPENSE) qua HTTP (HTTP 200).
 
 ### 2.3. Fuzz Test (Kiểm Thử Mờ/Bơm Rác)
 - **Tệp thực thi:** `tests/fuzz/transaction.service.fuzz.test.ts`
