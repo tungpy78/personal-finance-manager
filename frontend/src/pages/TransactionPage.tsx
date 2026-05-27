@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Row, Col, Statistic, Progress, List, Avatar, Typography, Tag, message } from 'antd';
+import { Card, Row, Col, Statistic, List, Avatar, Typography, Tag, message } from 'antd';
 import { PlusOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import { FloatButton } from 'antd';
 import { FormThemGiaoDich } from './FormThemGiaoDich';
 import type { Transaction } from '../types/transaction.type';
 import { transactionApi } from '../services/transaction.service';
-import { budgetApi } from '../services/budget.service'; // 1. Import thêm budgetApi
 import type { AxiosError } from 'axios';
 import type { ApiErrorResponse } from '../types/api.type';
-import type { BudgetProgress } from '../types/budget.type';
 import { formatVND } from '../utils/formatVND';
 
 const { Text, Title } = Typography;
@@ -18,8 +16,6 @@ export const TransactionPage = () => {
     const [loading, setLoading] = useState(false);
     const [transaction, setTransaction] = useState<Transaction[]>([]);
     
-    const [budgetProgress, setBudgetProgress] = useState<BudgetProgress[]>([]);
-
     const fetchData = async () => {
         try {
             setLoading(true);
@@ -32,26 +28,11 @@ export const TransactionPage = () => {
         } finally {
             setLoading(false);
         }
-    };
-
-    const fetchBudget = async () => {
-        try {
-            const currentDate = new Date();
-            const currentMonth = currentDate.getMonth() + 1;
-            const currentYear = currentDate.getFullYear();
-            const response = await budgetApi.getBudgetProgress(currentMonth, currentYear);
-            setBudgetProgress(response.data);
-        } catch (error) {
-            console.log("Chưa cài đặt ngân sách hoặc lỗi API Budget");
-        }
-    };
+    }; 
 
     useEffect(() => {
         fetchData();
-        fetchBudget();
     }, []);
-
-    console.log("budget", budgetProgress)
 
     
     const { totalIncome, totalExpense, currentBalance } = useMemo(() => {
@@ -77,34 +58,7 @@ export const TransactionPage = () => {
                     <Card bordered={false} style={{ background: '#e6f4ff' }}><Statistic title="Số dư hiện tại" value={currentBalance} precision={0} valueStyle={{ color: '#1677ff' }} suffix="đ" /></Card>
                 </Col>
             </Row>
-
-           
-           <Card title={`Theo dõi ngân sách tháng ${new Date().getMonth() + 1}`} bordered={false} style={{ marginBottom: 24, borderRadius: 12 }}>
-                {budgetProgress.length === 0 ? (
-                    <Text type="secondary">Bạn chưa thiết lập hạn mức chi tiêu cho tháng này.</Text>
-                ) : (
-                    budgetProgress.map((budget) => (
-                        <div key={budget.id} style={{ marginBottom: 16 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                                
-                                {/* TỐI ƯU UI: Hiển thị tên danh mục thật và ép kiểu amount về Number */}
-                                <Text strong>
-                                    {budget.category?.name || 'Không xác định'} (Hạn mức: {Number(budget.amount).toLocaleString()}đ)
-                                </Text>
-                                
-                                <Text type="secondary">Đã tiêu: {Number(budget.totalSpent).toLocaleString()}đ ({budget.percentage}%)</Text>
-                            </div>
-                            <Progress 
-                                percent={budget.percentage > 100 ? 100 : budget.percentage} 
-                                status={budget.percentage >= 100 ? "exception" : "active"}
-                                strokeColor={budget.percentage >= 100 ? '#ff4d4f' : budget.percentage >= 80 ? '#faad14' : '#52c41a'}
-                            />
-                        </div>
-                    ))
-                )}
-            </Card>
-
-            
+       
             <Card title="Lịch sử giao dịch" bordered={false} style={{ borderRadius: 12 }}>
                 <List
                     itemLayout="horizontal"
@@ -130,7 +84,7 @@ export const TransactionPage = () => {
             <FormThemGiaoDich 
                 open={isModalOpen} 
                 onClose={() => setIsModalOpen(false)} 
-                onSuccess={() => { fetchData(); fetchBudget(); }} 
+                onSuccess={() => { fetchData(); }} 
             />
         </div>
     );
