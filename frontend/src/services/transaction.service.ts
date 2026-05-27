@@ -18,5 +18,17 @@ export const transactionApi = {
     // Gọi hàm này để xóa
     delete: (id: number): Promise<any> => {
         return axiosClient.delete<any, ApiResponse<any>>(`/transactions/${id}`);
+    },
+
+    // Gọi hàm này để tìm kiếm và lọc giao dịch
+    search: (filters: {
+        search?: string;
+        begin_date?: string;
+        end_date?: string;
+        sort?: 'date_asc' | 'date_desc' | 'amount_asc' | 'amount_desc';
+        categoryId?: number;
+        type?: 'INCOME' | 'EXPENSE';
+    }) => {
+        return axiosClient.post<any, ApiResponse<Transaction[]>>('/transactions/search', filters);
     }
 };
