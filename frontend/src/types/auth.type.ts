@@ -1,0 +1,20 @@
+export interface UserAttributes {
+  id: number;
+  email: string;
+  phone: string | null;
+  role: 'admin' | 'manager' | 'receptionist' | 'customer';
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface RegisterPayload {
+    username: string;
+    email: string;
+    password: string;
+}

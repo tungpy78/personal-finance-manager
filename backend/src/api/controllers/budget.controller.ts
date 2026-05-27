@@ -39,4 +39,26 @@ export class BudgetController {
             next(error);
         }
     }
+
+    static async getTotalAmount(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const userId = req.user.id;
+            const categoryId = Number(req.query.category_id);
+            const month = Number(req.query.month);
+            const year = Number(req.query.year);
+
+            // SQA: Kiểm tra chặn dữ liệu rác/thiếu
+            if (!categoryId || !month || !year) {
+                throw new Error("Vui lòng cung cấp category_id, tháng và năm hợp lệ.");
+            }
+
+            // Gọi thẳng xuống Service mới để tính tổng tiền (áp dụng được cho cả INCOME và EXPENSE)
+            const result = await BudgetService.getTotalAmountByCategory(userId, categoryId, month, year);
+
+            return AppResponse.success(res, result, 'Tính tổng tiền danh mục thành công', 200);
+            
+        } catch (error) {
+            next(error);
+        }
+    }
 }

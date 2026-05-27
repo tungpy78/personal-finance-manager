@@ -1,10 +1,53 @@
+import { Op } from "sequelize";
 import Category from "../models/Category.js";
+import Transaction from "../models/Transaction.js";
 
 export class CategoryRepository {
 
-    static async findByPk(transactionId : number){
-        const category = await Category.findByPk(transactionId);
+    static async findByPk(categoryId: number, userId: number) {
+        const category = await Category.findOne({
+            where: { id: categoryId, userId }
+        });
+        return category ? category.get({ plain: true }) : null;
+    }
 
-        return category?.toJSON();
+    static async findAll(userId: number, filters: { keyword?: string | undefined, type?: string | undefined }) {
+        const where: any = { userId };
+        if (filters.keyword) {
+            where.name = { [Op.like]: `%${filters.keyword}%` };
+        }
+        if (filters.type) {
+            where.type = filters.type;
+        }
+
+        const categories = await Category.findAll({ 
+            where,
+            order: [['createdAt', 'DESC']]
+        });
+        return categories.map(c => c.get({ plain: true }));
+    }
+
+    static async findOneByNameAndType(name: string, type: string, userId: number) {
+        const category = await Category.findOne({ where: { name, type, userId } });
+        return category ? category.get({ plain: true }) : null;
+    }
+
+    static async create(data: any) {
+        const category = await Category.create(data);
+        return category.get({ plain: true });
+    }
+
+    static async update(id: number, userId: number, data: any) {
+        await Category.update(data, { where: { id, userId } });
+        return this.findByPk(id, userId);
+    }
+
+    static async delete(id: number, userId: number) {
+        return await Category.destroy({ where: { id, userId } });
+    }
+
+    static async isCategoryUsed(categoryId: number): Promise<boolean> {
+        const count = await Transaction.count({ where: { categoryId } });
+        return count > 0;
     }
 }

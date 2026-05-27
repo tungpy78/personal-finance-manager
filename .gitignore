@@ -5,3 +5,7 @@
 **/.DS_Store
 backend/.env
 *.log
+tests/
+jest.config.js
+Makefile
+package-lock.json

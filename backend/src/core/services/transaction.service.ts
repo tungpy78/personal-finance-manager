@@ -5,10 +5,15 @@ import type { CreateTransactionDTO, SearchTransactionDTO } from "../dtos/transac
 import { BudgetService } from "./budget.service.js";
 
 export class TransactionService {
+
+    static async getTransaction(userId: number) {
+        const transaction = await TransactionRepository.getByUser(userId);
+        return transaction;
+    }
     
     // --- 1. THÊM GIAO DỊCH (Có kiểm tra ngân sách) ---
     static async createTransaction(userId: number, data: CreateTransactionDTO) {
-        const category = await CategoryRepository.findByPk(data.categoryId);
+        const category = await CategoryRepository.findByPk(data.categoryId, userId);
         if (!category) {
             throw new ApiError('Danh mục không tồn tại!', 404);
         }
@@ -69,7 +74,7 @@ export class TransactionService {
             throw new ApiError('Bạn không có quyền sửa giao dịch của người khác!', 403);
         }
 
-        const newCategory = await CategoryRepository.findByPk(data.categoryId);
+        const newCategory = await CategoryRepository.findByPk(data.categoryId, userId);
         if (!newCategory) {
             throw new ApiError('Danh mục không tồn tại!', 404);
         }
@@ -85,7 +90,7 @@ export class TransactionService {
         const date = new Date(data.date);
 
         for (const catId of affectedCategories) {
-            const category = await CategoryRepository.findByPk(catId);
+            const category = await CategoryRepository.findByPk(catId, userId);
 
             if (category?.type === 'EXPENSE') {
                 const alert = await BudgetService.checkBudgetAlert(
