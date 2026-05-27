@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Row, Col, Statistic, Progress, List, Avatar, Typography, Tag, message, Form, Input, Select, DatePicker, Button, Space } from 'antd';
-import { PlusOutlined, ArrowUpOutlined, ArrowDownOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Statistic, Progress, List, Avatar, Typography, Tag, message, Form, Input, Select, DatePicker, Button, Space, Popconfirm } from 'antd';
+import { PlusOutlined, ArrowUpOutlined, ArrowDownOutlined, SearchOutlined, ReloadOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { FloatButton } from 'antd';
 import { FormThemGiaoDich } from './FormThemGiaoDich';
 import type { Transaction } from '../types/transaction.type';
@@ -22,6 +22,7 @@ export const TransactionPage = () => {
     const [transaction, setTransaction] = useState<Transaction[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loadingCategories, setLoadingCategories] = useState(false);
+    const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     
     const [budgetProgress, setBudgetProgress] = useState<BudgetProgress[]>([]);
     const [form] = Form.useForm();
@@ -108,6 +109,28 @@ export const TransactionPage = () => {
         });
         return { totalIncome: income, totalExpense: expense, currentBalance: income - expense };
     }, [transaction]);
+
+    const handleDelete = async (id: number) => {
+
+    try {
+
+        await transactionApi.delete(id);
+
+        message.success('Xóa giao dịch thành công!');
+
+        fetchData();
+        fetchBudget();
+
+    } catch (error) {
+
+        const err = error as AxiosError<ApiErrorResponse>;
+
+        message.error(
+            err.response?.data?.message ||
+            'Xóa thất bại'
+        );
+    }
+};
 
     return (
         <div style={{ paddingBottom: 60 }}>
@@ -231,7 +254,51 @@ export const TransactionPage = () => {
                         return (
                             <List.Item
                                 style={{ padding: '16px 0', borderBottom: '1px solid #f0f0f0' }}
-                                extra={<Title level={4} style={{ color: item.type === 'INCOME' ? '#3f8600' : '#cf1322', margin: 0 }}>{item.type === 'INCOME' ? '+' : '-'}{formatVND(item.amount)}</Title>}
+                                extra={
+                                    <Space direction="vertical" align="end">
+
+                                        <Title
+                                            level={4}
+                                            style={{
+                                                color:
+                                                    item.type === 'INCOME'
+                                                        ? '#3f8600'
+                                                        : '#cf1322',
+                                                margin: 0
+                                            }}
+                                        >
+                                            {item.type === 'INCOME' ? '+' : '-'}
+                                            {formatVND(item.amount)}
+                                        </Title>
+
+                                        <Space>
+
+                                            <Button
+                                                icon={<EditOutlined />}
+                                                onClick={() => {
+                                                    setEditingTransaction(item);
+                                                    setIsModalOpen(true);
+                                                }}
+                                            >
+                                                Sửa
+                                            </Button>
+
+                                            <Popconfirm
+                                                title="Xóa giao dịch"
+                                                description="Bạn chắc chắn muốn xóa?"
+                                                onConfirm={() => handleDelete(item.id)}
+                                                okText="Xóa"
+                                                cancelText="Hủy"
+                                            >
+                                                <Button danger icon={<DeleteOutlined />}>
+                                                    Xóa
+                                                </Button>
+                                            </Popconfirm>
+
+                                        </Space>
+
+                                    </Space>
+                                }
                             >
                                 <List.Item.Meta
                                     avatar={<Avatar size="large" style={{ backgroundColor: item.type === 'INCOME' ? '#d9f7be' : '#ffd8bf', color: '#000' }} icon={item.type === 'INCOME' ? <ArrowUpOutlined /> : <ArrowDownOutlined />} />}
@@ -253,8 +320,12 @@ export const TransactionPage = () => {
             
             <FormThemGiaoDich 
                 open={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setEditingTransaction(null);
+                }}
                 onSuccess={() => { fetchData(); fetchBudget(); }} 
+                editData={editingTransaction}
             />
         </div>
     );

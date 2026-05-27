@@ -9,15 +9,16 @@ import type { AxiosError } from 'axios';
 import type { ApiErrorResponse, ApiResponse } from '../types/api.type';
 import type { Category } from '../types/category.type';
 import { transactionApi } from '../services/transaction.service';
-import type { CreateTransactionResponse } from '../types/transaction.type';
+import type { Transaction } from '../types/transaction.type';
 
 interface FormThemGiaoDichProps {
     open: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    editData?: Transaction | null;
 }
 
-export const FormThemGiaoDich = ({ open, onClose, onSuccess }: FormThemGiaoDichProps) => {
+export const FormThemGiaoDich = ({ open, onClose, onSuccess, editData}: FormThemGiaoDichProps) => {
     const [categories, setCategories] = useState<Category[]>([]);
     const [loadingCategories, setLoadingCategories] = useState(false);
     
@@ -40,6 +41,7 @@ export const FormThemGiaoDich = ({ open, onClose, onSuccess }: FormThemGiaoDichP
         fetchCategories();
     }, []);
 
+
     const { control, handleSubmit, watch, reset, formState: { errors, isSubmitting } } = useForm<TransactionFormValues>({
         resolver: zodResolver(transactionSchema), 
         defaultValues: {
@@ -49,37 +51,94 @@ export const FormThemGiaoDich = ({ open, onClose, onSuccess }: FormThemGiaoDichP
         } as Partial<TransactionFormValues>
     });
 
-    const onSubmit = async (data: TransactionFormValues) => {
-        try {
-            const { data: resultData } = await transactionApi.create(data) as unknown as ApiResponse<CreateTransactionResponse>;
-            
+    useEffect(() => {
+        if (editData) {
+            reset({
+                amount: editData.amount,
+                categoryId: editData.categoryId,
+                date: editData.date,
+                description: editData.description,
+                type: editData.type
+            });
+        } else {
+            reset({
+                amount: 0,
+                type: 'EXPENSE',
+                description: ''
+            });
+        }
+    }, [editData, reset]);
 
-            if (resultData.budgetAlert) {
-                const alert = resultData.budgetAlert;
-                
+    const onSubmit = async (data: TransactionFormValues) => {
+    try {
+
+        if (editData) {
+
+            const response  = await transactionApi.update(editData.id, data)
+
+            const alerts = response.data.budgetAlerts || [];
+
+            let hasDanger = false;
+
+            alerts.forEach(alert => {
+
                 if (alert.level === 'DANGER') {
                     message.error(`Cảnh báo: ${alert.message}`, 5);
-                } else if (alert.level === 'WARNING') {
+                    hasDanger = true;
+                }
+
+                else if (alert.level === 'WARNING') {
                     message.warning(`Chú ý: ${alert.message}`, 5);
                 }
+
+            });
+
+            if (!hasDanger) {
+                message.success('Cập nhật giao dịch thành công!');
+            }
+
+        } else {
+
+            const response = await transactionApi.create(data)
+
+            if (response.data.budgetAlert) {
+
+                const alert = response.data.budgetAlert;
+
+                if (alert.level === 'DANGER') {
+                    message.error(`Cảnh báo: ${alert.message}`, 5);
+                }
+
+                else if (alert.level === 'WARNING') {
+                    message.warning(`Chú ý: ${alert.message}`, 5);
+                }
+
             } else {
                 message.success('Thêm giao dịch thành công!');
             }
-            reset();
-            onSuccess();
-            onClose();
-        } catch (error) {
-            const err = error as AxiosError<ApiErrorResponse>
-            message.error(err.message)
         }
-    };
+
+        reset();
+        onSuccess();
+        onClose();
+
+    } catch (error) {
+
+        const err = error as AxiosError<ApiErrorResponse>;
+
+        message.error(
+            err.response?.data?.message ||
+            'Có lỗi xảy ra'
+        );
+    }
+};
 
     const selectedType = watch('type');
     
     const filteredCategories = categories.filter(cat => cat.type === selectedType);
 
     return (
-        <Modal open={open} onCancel={onClose} footer={null}>
+        <Modal open={open} onCancel={onClose} footer={null} title={editData ? 'Cập nhật giao dịch' : 'Thêm giao dịch'}>
             <Form layout="vertical" onFinish={handleSubmit(onSubmit)} style={{ maxWidth: 400 }}>
             
             <Form.Item 
@@ -166,7 +225,7 @@ export const FormThemGiaoDich = ({ open, onClose, onSuccess }: FormThemGiaoDichP
             </Form.Item>
 
             <Button type="primary" htmlType="submit" loading={isSubmitting} block>
-                Lưu giao dịch
+                {editData ? 'Cập nhật' : 'Lưu giao dịch'}
             </Button>
         </Form>
         </Modal>

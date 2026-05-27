@@ -1,5 +1,5 @@
 import type { ApiResponse } from '../types/api.type';
-import type { CreateTransactionDTO, CreateTransactionResponse, Transaction } from '../types/transaction.type';
+import type { CreateTransactionDTO, CreateTransactionResponse, Transaction, UpdateTransactionResponse } from '../types/transaction.type';
 import axiosClient from './axiosClient';
 
 
@@ -13,8 +13,11 @@ export const transactionApi = {
     create: (data: CreateTransactionDTO) => {
         return axiosClient.post<any , ApiResponse<CreateTransactionResponse>>('/transactions', data);
     },
-    
 
+    update: (id: number, data: CreateTransactionDTO) => {
+        return axiosClient.put<any, ApiResponse<UpdateTransactionResponse>>(`/transactions/${id}`, data);
+    },
+    
     // Gọi hàm này để xóa
     delete: (id: number): Promise<any> => {
         return axiosClient.delete<any, ApiResponse<any>>(`/transactions/${id}`);
