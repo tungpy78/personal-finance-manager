@@ -1,4 +1,10 @@
-// Định nghĩa kiểu dữ liệu chuẩn khớp 100% với Backend
+export interface BudgetAlert {
+    level: 'WARNING' | 'DANGER';
+    message: string;
+    percentage: number;
+}
+
+
 export interface Transaction {
     id: number;
     amount: number;
@@ -12,9 +18,9 @@ export interface Transaction {
 export type CreateTransactionDTO = Omit<Transaction, 'id'>;
 
 export interface CreateTransactionResponse extends Transaction {
-    budgetAlert?: {
-        level: 'WARNING' | 'DANGER';
-        message: string;
-        percentage: number;
-    } | null;
+    budgetAlert?: BudgetAlert | null;
+}
+
+export interface UpdateTransactionResponse extends Transaction {
+    budgetAlerts?: BudgetAlert[];
 }
