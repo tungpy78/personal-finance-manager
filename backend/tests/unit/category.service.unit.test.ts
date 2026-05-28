@@ -25,6 +25,8 @@ const { CategoryService } = await import("../../src/core/services/category.servi
 
 describe("CategoryService - Unit Test", () => {
 
+    const userId = 1;
+
     beforeEach(() => {
         jest.clearAllMocks();
     });
@@ -32,9 +34,9 @@ describe("CategoryService - Unit Test", () => {
     describe("getCategories", () => {
         it("nên trả về danh sách danh mục", async () => {
             mockFindAll.mockResolvedValue(mockCategories);
-            const result = await CategoryService.getCategories({});
+            const result = await CategoryService.getCategories(userId, {});
             expect(result).toEqual(mockCategories);
-            expect(mockFindAll).toHaveBeenCalled();
+            expect(mockFindAll).toHaveBeenCalledWith(userId, {});
         });
     });
 
@@ -42,21 +44,21 @@ describe("CategoryService - Unit Test", () => {
         it("nên tạo danh mục mới nếu chưa tồn tại", async () => {
             const newCategory = { name: 'Thú cưng', type: 'EXPENSE', icon: 'pet' };
             mockFindOneByNameAndType.mockResolvedValue(null);
-            mockCreate.mockResolvedValue({ id: 5, ...newCategory });
+            mockCreate.mockResolvedValue({ id: 5, ...newCategory, userId });
 
-            const result = await CategoryService.createCategory(newCategory as any);
+            const result = await CategoryService.createCategory(userId, newCategory as any);
 
             expect(result.id).toBe(5);
-            expect(mockCreate).toHaveBeenCalledWith(newCategory);
+            expect(mockCreate).toHaveBeenCalledWith({ ...newCategory, userId });
         });
 
         it("nên ném lỗi nếu danh mục đã tồn tại", async () => {
             const existingCategory = mockCategories[0];
             mockFindOneByNameAndType.mockResolvedValue(existingCategory);
 
-            await expect(CategoryService.createCategory(existingCategory as any))
+            await expect(CategoryService.createCategory(userId, existingCategory as any))
                 .rejects
-                .toThrow('Danh mục này đã tồn tại trong hệ thống!');
+                .toThrow('Danh mục này đã tồn tại trong danh sách của bạn!');
         });
     });
 
@@ -67,24 +69,24 @@ describe("CategoryService - Unit Test", () => {
             mockFindOneByNameAndType.mockResolvedValue(null);
             mockUpdate.mockResolvedValue({ ...mockCategories[0], ...updateData });
 
-            const result = await CategoryService.updateCategory(1, updateData as any);
+            const result = await CategoryService.updateCategory(1, userId, updateData as any);
 
             expect(result.name).toBe('Ăn uống ngon');
-            expect(mockUpdate).toHaveBeenCalledWith(1, updateData);
+            expect(mockUpdate).toHaveBeenCalledWith(1, userId, updateData);
         });
 
         it("nên ném lỗi nếu danh mục không tồn tại", async () => {
             mockFindByPk.mockResolvedValue(null);
-            await expect(CategoryService.updateCategory(999, {} as any))
+            await expect(CategoryService.updateCategory(999, userId, {} as any))
                 .rejects
-                .toThrow('Danh mục không tồn tại!');
+                .toThrow('Danh mục không tồn tại hoặc bạn không có quyền chỉnh sửa!');
         });
 
         it("nên ném lỗi nếu tên mới trùng với danh mục khác cùng loại", async () => {
             mockFindByPk.mockResolvedValue(mockCategories[0]);
             mockFindOneByNameAndType.mockResolvedValue(mockCategories[1]); // Trùng với ID 2
 
-            await expect(CategoryService.updateCategory(1, { name: 'Di chuyển', type: 'EXPENSE' } as any))
+            await expect(CategoryService.updateCategory(1, userId, { name: 'Di chuyển', type: 'EXPENSE' } as any))
                 .rejects
                 .toThrow('Tên danh mục mới đã trùng với một danh mục khác!');
         });
@@ -96,17 +98,17 @@ describe("CategoryService - Unit Test", () => {
             mockIsCategoryUsed.mockResolvedValue(false);
             mockDelete.mockResolvedValue(true);
 
-            const result = await CategoryService.deleteCategory(1);
+            const result = await CategoryService.deleteCategory(1, userId);
 
             expect(result.message).toBe("Xóa danh mục thành công!");
-            expect(mockDelete).toHaveBeenCalledWith(1);
+            expect(mockDelete).toHaveBeenCalledWith(1, userId);
         });
 
         it("nên ném lỗi nếu danh mục đang được sử dụng", async () => {
             mockFindByPk.mockResolvedValue(mockCategories[0]);
             mockIsCategoryUsed.mockResolvedValue(true);
 
-            await expect(CategoryService.deleteCategory(1))
+            await expect(CategoryService.deleteCategory(1, userId))
                 .rejects
                 .toThrow('Không thể xóa danh mục này vì đang có giao dịch liên quan!');
         });

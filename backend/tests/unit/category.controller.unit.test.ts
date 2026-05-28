@@ -26,6 +26,7 @@ describe("CategoryController - Unit Test", () => {
             query: {},
             params: {},
             body: {},
+            user: { id: 1 } // Giả lập user đã login
         };
         res = {
             status: jest.fn().mockReturnThis(),
@@ -42,7 +43,7 @@ describe("CategoryController - Unit Test", () => {
 
             await CategoryController.getCategories(req, res, next);
 
-            expect(mockGetCategories).toHaveBeenCalled();
+            expect(mockGetCategories).toHaveBeenCalledWith(1, {});
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
                 success: true,
                 data: mockData
@@ -58,7 +59,7 @@ describe("CategoryController - Unit Test", () => {
 
             await CategoryController.createCategory(req, res, next);
 
-            expect(mockCreateCategory).toHaveBeenCalledWith(req.body);
+            expect(mockCreateCategory).toHaveBeenCalledWith(1, req.body);
             expect(res.status).toHaveBeenCalledWith(201);
         });
     });
@@ -77,7 +78,7 @@ describe("CategoryController - Unit Test", () => {
 
             await CategoryController.updateCategory(req, res, next);
 
-            expect(mockUpdateCategory).toHaveBeenCalledWith(1, req.body);
+            expect(mockUpdateCategory).toHaveBeenCalledWith(1, 1, req.body);
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
     });
@@ -89,7 +90,7 @@ describe("CategoryController - Unit Test", () => {
 
             await CategoryController.deleteCategory(req, res, next);
 
-            expect(mockDeleteCategory).toHaveBeenCalledWith(1);
+            expect(mockDeleteCategory).toHaveBeenCalledWith(1, 1);
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
     });
