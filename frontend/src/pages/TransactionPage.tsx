@@ -1,26 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-<<<<<<< HEAD
-import { Card, Row, Col, Statistic, List, Avatar, Typography, Tag, message } from 'antd';
-import { PlusOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
-=======
-import { Card, Row, Col, Statistic, Progress, List, Avatar, Typography, Tag, message, Form, Input, Select, DatePicker, Button, Space, Popconfirm } from 'antd';
+import { Card, Row, Col, Statistic, List, Avatar, Typography, Tag, message, Form, Input, Select, DatePicker, Button, Space, Popconfirm } from 'antd';
 import { PlusOutlined, ArrowUpOutlined, ArrowDownOutlined, SearchOutlined, ReloadOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
->>>>>>> 28e8745e3c1e03cc3ebbf2edd5815e11c44b5e66
 import { FloatButton } from 'antd';
 import { FormThemGiaoDich } from './FormThemGiaoDich';
 import type { Transaction } from '../types/transaction.type';
 import { transactionApi } from '../services/transaction.service';
-<<<<<<< HEAD
-import type { AxiosError } from 'axios';
-import type { ApiErrorResponse } from '../types/api.type';
-=======
-import { budgetApi } from '../services/budget.service'; // 1. Import thêm budgetApi
 import { categoryApi } from '../services/category.service';
 import type { Category } from '../types/category.type';
 import type { AxiosError } from 'axios';
 import type { ApiErrorResponse, ApiResponse } from '../types/api.type';
-import type { BudgetProgress } from '../types/budget.type';
->>>>>>> 28e8745e3c1e03cc3ebbf2edd5815e11c44b5e66
 import { formatVND } from '../utils/formatVND';
 import dayjs from 'dayjs';
 
@@ -34,9 +22,6 @@ export const TransactionPage = () => {
     const [loadingCategories, setLoadingCategories] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     
-<<<<<<< HEAD
-=======
-    const [budgetProgress, setBudgetProgress] = useState<BudgetProgress[]>([]);
     const [form] = Form.useForm();
 
     const fetchCategories = async () => {
@@ -52,7 +37,6 @@ export const TransactionPage = () => {
         }
     };
 
->>>>>>> 28e8745e3c1e03cc3ebbf2edd5815e11c44b5e66
     const fetchData = async () => {
         try {
             setLoading(true);
@@ -85,9 +69,6 @@ export const TransactionPage = () => {
         fetchData();
     }, []);
 
-<<<<<<< HEAD
-    
-=======
     const watchType = Form.useWatch('type', form);
 
     const filteredCategoriesForFilter = useMemo(() => {
@@ -104,7 +85,6 @@ export const TransactionPage = () => {
         fetchData();
     };
 
->>>>>>> 28e8745e3c1e03cc3ebbf2edd5815e11c44b5e66
     const { totalIncome, totalExpense, currentBalance } = useMemo(() => {
         let income = 0; let expense = 0;
         transaction.forEach(item => {
@@ -123,7 +103,6 @@ export const TransactionPage = () => {
         message.success('Xóa giao dịch thành công!');
 
         fetchData();
-        fetchBudget();
 
     } catch (error) {
 
@@ -297,17 +276,12 @@ export const TransactionPage = () => {
             
             <FormThemGiaoDich 
                 open={isModalOpen} 
-<<<<<<< HEAD
-                onClose={() => setIsModalOpen(false)} 
-                onSuccess={() => { fetchData(); }} 
-=======
                 onClose={() => {
                     setIsModalOpen(false);
                     setEditingTransaction(null);
                 }}
-                onSuccess={() => { fetchData(); fetchBudget(); }} 
+                onSuccess={() => { fetchData();}} 
                 editData={editingTransaction}
->>>>>>> 28e8745e3c1e03cc3ebbf2edd5815e11c44b5e66
             />
         </div>
     );
