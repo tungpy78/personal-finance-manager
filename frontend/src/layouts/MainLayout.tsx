@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button, Layout, Menu, Space, theme, Typography } from 'antd';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { DashboardOutlined, TransactionOutlined, SettingOutlined, WalletOutlined, LogoutOutlined } from '@ant-design/icons';
+import { DashboardOutlined, TransactionOutlined, SettingOutlined, WalletOutlined, LogoutOutlined, PieChartOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../stores/auth.store';
 
 const { Header, Sider, Content } = Layout;
@@ -26,6 +26,7 @@ export const MainLayout = () => {
         { key: '/', icon: <DashboardOutlined />, label: 'Tổng quan' },
         { key: '/transactions', icon: <TransactionOutlined />, label: 'Sổ giao dịch' },
         { key: '/categories', icon: <WalletOutlined />, label: 'Danh mục' },
+        { key: '/budgets', icon: <PieChartOutlined />, label: 'Ngân sách' },
         { key: '/settings', icon: <SettingOutlined />, label: 'Cài đặt' },
     ];
 

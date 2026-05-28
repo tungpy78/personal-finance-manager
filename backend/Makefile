@@ -1,38 +1,59 @@
-# Makefile for Backend Personal Finance Manager
-# Author: Dang Viet Hung (UC03)
-# Description: Quick commands to run backend development, database sync, and tests.
+# ==========================================
+# BUDGET TEST MAKEFILE
+# ==========================================
 
-.PHONY: dev sync test-search test-search-unit test-search-integration test-search-fuzz test-search-load help
+.PHONY: help unit integration fuzz load all
 
 help:
-	@echo "========================================================================="
-	@echo "  Backend CLI Commands Makefile"
-	@echo "========================================================================="
-	@echo "  make test-search             - Run ALL UC03 Transaction Search tests"
-	@echo "  make test-search-unit        - Run ONLY UC03 Search Unit Test"
-	@echo "  make test-search-integration - Run ONLY UC03 Search Integration Test"
-	@echo "  make test-search-fuzz        - Run ONLY UC03 Search Fuzz Test"
-	@echo "  make test-search-load        - Run ONLY UC03 Search Load/Stress Test"
-	@echo "========================================================================="
+	@echo "================================="
+	@echo " BUDGET TEST COMMANDS "
+	@echo "================================="
+	@echo "make unit         - Budget Unit Test"
+	@echo "make integration  - Budget Integration Test"
+	@echo "make fuzz         - Budget Fuzz Test"
+	@echo "make load         - Budget Load Test"
+	@echo "make all          - Run All Budget Tests"
+	@echo "================================="
 
-dev:
-	npm run dev
 
-sync:
-	npm run sync
+# ==========================================
+# UNIT TEST
+# ==========================================
 
-# --- Specific UC03 Transaction Search tests (Dang Viet Hung) ---
-test-search:
-	npx cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit/transaction.service.unit.test.ts tests/integration/transaction.service.integration.test.ts tests/fuzz/transaction.service.fuzz.test.ts
+unit:
+	npx jest tests/unit/budget.unit.test.ts
 
-test-search-unit:
-	npx cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit/transaction.service.unit.test.ts
 
-test-search-integration:
-	npx cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration/transaction.service.integration.test.ts
+# ==========================================
+# INTEGRATION TEST
+# ==========================================
 
-test-search-fuzz:
-	npx cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/fuzz/transaction.service.fuzz.test.ts
+integration:
+	npx jest tests/integration/budget.integration.test.ts
 
-test-search-load:
-	npx tsx tests/load/search.load.ts
+
+# ==========================================
+# FUZZ TEST
+# ==========================================
+
+fuzz:
+	npx jest tests/fuzz/budget.fuzz.test.ts
+
+
+# ==========================================
+# LOAD TEST
+# ==========================================
+
+load:
+	npx tsx tests/load/budget.load.ts
+
+
+# ==========================================
+# RUN ALL
+# ==========================================
+
+all:
+	npx jest tests/unit/budget.unit.test.ts
+	npx jest tests/integration/budget.integration.test.ts
+	npx jest tests/fuzz/budget.fuzz.test.ts
+	npx tsx tests/load/budget.load.ts

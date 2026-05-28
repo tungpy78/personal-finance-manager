@@ -3,8 +3,9 @@ import { CategoryRepository } from '../../database/repositories/category.reposit
 import { BudgetRepository } from '../../database/repositories/budget.repository.js';
 
 export class BudgetService {
+  // 1. CHỐT CHẶN NGÂN SÁCH: Chỉ áp dụng cho danh mục Chi (Giữ nguyên)
   static async setupBudget(userId: number, payload: UpsertBudgetDTO) {
-    const category = await CategoryRepository.findByPk(payload.category_id);
+    const category = await CategoryRepository.findByPk(payload.category_id, userId);
     
     if (!category) {
       throw new Error("Danh mục chi tiêu không tồn tại hoặc không thuộc quyền sở hữu của bạn.");
@@ -25,6 +26,7 @@ export class BudgetService {
     return savedBudget;
   }
 
+  // 2. XEM TIẾN ĐỘ: Chỉ tính toán cho các danh mục đã thiết lập ngân sách (Giữ nguyên)
   static async getBudgetProgress(userId: number, month: number, year: number) {
     const budgets = await BudgetRepository.getBudgetsByMonth(userId, month, year);
 
@@ -50,13 +52,16 @@ export class BudgetService {
     return progressList;
   }
 
+  // 3. CẢNH BÁO TỰ ĐỘNG: Chỉ kích hoạt cho ngân sách Chi tiêu (Giữ nguyên)
   static async checkBudgetAlert(userId: number, categoryId: number, month: number, year: number) {
     const budget = await BudgetRepository.getBudgetByCategory(userId, categoryId, month, year);
     
-    if (!budget) return null; 
+    if (!budget || !budget.amount || budget.amount <= 0) {
+      return null;
+    }
 
     const totalSpent = await BudgetRepository.getSpentAmount({ userId, categoryId, month, year });
-    const percentage = (totalSpent / budget.amount) * 100;
+    const percentage = Number(((totalSpent / budget.amount) * 100).toFixed(2));
 
     if (percentage >= 100) {
       return { 
@@ -72,5 +77,22 @@ export class BudgetService {
       };
     }
     return null; 
+  }
+
+  // 4. [MỚI] TÍNH TỔNG THU/CHI: Tính tổng tiền cho BẤT KỲ danh mục nào
+  static async getTotalAmountByCategory(userId: number, categoryId: number, month: number, year: number) {
+    const totalAmount = await BudgetRepository.getSpentAmount({
+        userId,
+        categoryId,
+        month,
+        year
+    });
+
+    return {
+        categoryId,
+        month,
+        year,
+        totalAmount
+    };
   }
 }
