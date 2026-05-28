@@ -40,6 +40,15 @@ JWT_EXPIRES_IN=1d
 ```bash
 npm run dev
 ```
+## 5. Hướng dẫn chạy Kịch bản Kiểm thử (Test Scripts) - Dành cho Hội đồng đánh giá
+*(Phần minh chứng nghiệp vụ Đảm bảo chất lượng phần mềm - SQA)*
+
+**Kiểm thử Tích hợp Backend (Integration & Security Test)**
+Quét các luồng nghiệp vụ API, kiểm tra chặn IDOR và bắt lỗi dữ liệu.
+```bash
+cd backend
+npm run test
+```
 
 ---
 
