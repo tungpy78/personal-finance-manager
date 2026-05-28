@@ -19,7 +19,7 @@ describe("TransactionService - Unit Test - searchTransactions", () => {
         mockFindByCriteria.mockReset();
     });
 
-    it("nên trả về tất cả transactions của user khi không có filter", async () => {
+    it("TC01: nên trả về tất cả transactions của user khi không có filter", async () => {
         const userTransactions = mockTransactions.filter(t => t.userId === userId);
         mockFindByCriteria.mockResolvedValue(userTransactions as any);
 
@@ -29,7 +29,7 @@ describe("TransactionService - Unit Test - searchTransactions", () => {
         expect(result).toHaveLength(3);
     });
 
-    it("nên sắp xếp theo date_desc đúng cách", async () => {
+    it("TC08: nên sắp xếp theo date_desc đúng cách", async () => {
         const userTransactions = mockTransactions.filter(t => t.userId === userId);
         mockFindByCriteria.mockResolvedValue([...userTransactions] as any);
 
@@ -40,7 +40,7 @@ describe("TransactionService - Unit Test - searchTransactions", () => {
         expect(result[2]?.id).toBe(1); // Date 2026-05-01
     });
 
-    it("nên sắp xếp theo amount_asc đúng cách", async () => {
+    it("TC10: nên sắp xếp theo amount_asc đúng cách", async () => {
         const userTransactions = mockTransactions.filter(t => t.userId === userId);
         mockFindByCriteria.mockResolvedValue([...userTransactions] as any);
 
@@ -51,7 +51,7 @@ describe("TransactionService - Unit Test - searchTransactions", () => {
         expect(result[2]?.amount).toBe(500000); // id: 1
     });
 
-    it("nên sắp xếp theo date_asc đúng cách", async () => {
+    it("TC09: nên sắp xếp theo date_asc đúng cách", async () => {
         const userTransactions = mockTransactions.filter(t => t.userId === userId);
         mockFindByCriteria.mockResolvedValue([...userTransactions] as any);
 
@@ -62,7 +62,7 @@ describe("TransactionService - Unit Test - searchTransactions", () => {
         expect(result[2]?.id).toBe(3); // Date 2026-05-03
     });
 
-    it("nên sắp xếp theo amount_desc đúng cách", async () => {
+    it("TC07: nên sắp xếp theo amount_desc đúng cách", async () => {
         const userTransactions = mockTransactions.filter(t => t.userId === userId);
         mockFindByCriteria.mockResolvedValue([...userTransactions] as any);
 
@@ -73,7 +73,7 @@ describe("TransactionService - Unit Test - searchTransactions", () => {
         expect(result[2]?.amount).toBe(100000); // id: 3
     });
 
-    it("nên ném ra lỗi nếu repository ném lỗi", async () => {
+    it("TC21: nên ném ra lỗi nếu repository ném lỗi", async () => {
         mockFindByCriteria.mockRejectedValue(new Error("DB Error"));
 
         await expect(TransactionService.searchTransactions(userId, mockSearchFilters.empty))

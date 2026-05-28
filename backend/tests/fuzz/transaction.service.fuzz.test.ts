@@ -1,15 +1,13 @@
 import { jest } from '@jest/globals';
+import app from '../../src/app.js';
+import User from '../../src/database/models/User.js';
+import { AuthService } from '../../src/core/services/auth.service.js';
+import sequelize from '../../src/config/database.js';
+import type { Server } from 'http';
+import 'dotenv/config';
 
-const mockFindByCriteria = jest.fn() as any;
-
-jest.unstable_mockModule("../../src/database/repositories/transaction.repository.js", () => ({
-    TransactionRepository: {
-        findByCriteria: mockFindByCriteria
-    }
-}));
-
-const { TransactionService } = await import("../../src/core/services/transaction.service.js");
-const { TransactionRepository } = await import("../../src/database/repositories/transaction.repository.js");
+// Tăng timeout cho Jest vì 200 requests HTTP qua DB thật có thể mất thời gian
+jest.setTimeout(60000); 
 
 const generateRandomString = (length: number) => {
     let result = '';
@@ -40,32 +38,141 @@ const generateFuzzFilters = () => {
     };
 };
 
-describe("TransactionService - Fuzz Test - searchTransactions", () => {
-    const userId = 1;
+describe("Transaction - API-level Fuzz Test - searchTransactions", () => {
+    let server: Server;
+    let baseURL: string;
+    let cachedToken: string | null = null;
+    let tokenExpiry: number = 0; // Epoch timestamp in seconds
 
-    beforeEach(() => {
-        jest.restoreAllMocks();
-        jest.spyOn(TransactionRepository, 'findByCriteria').mockResolvedValue([
-            { id: 1, amount: 1000, date: new Date() },
-            { id: 2, amount: 2000, date: new Date() }
-        ] as any);
+    let testEmail = "tung@gmail.com";
+    let testPassword = "tung12345";
+    let isTempUserCreated = false;
+    let tempUserEmail = '';
+
+    // Hàm lấy token, chỉ gọi lại khi token hết hạn
+    const getAuthToken = async (): Promise<string> => {
+        const nowInSeconds = Math.floor(Date.now() / 1000);
+        // Nếu token vẫn còn hạn (có buffer 60 giây) thì trả về luôn
+        if (cachedToken && nowInSeconds < tokenExpiry - 60) {
+            return cachedToken;
+        }
+
+        // Nếu hết hạn hoặc chưa có, gọi API đăng nhập để lấy token mới
+        const loginResponse = await fetch(`${baseURL}/api/v1/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: testEmail,
+                password: testPassword
+            })
+        });
+
+        const result = await loginResponse.json() as any;
+        if (!loginResponse.ok || !result.success) {
+            throw new Error(`Đăng nhập thất bại để lấy token: ${JSON.stringify(result)}`);
+        }
+
+        const token = result.data.accessToken;
+        cachedToken = token;
+
+        // Giải mã JWT Payload để lấy thời gian hết hạn (exp)
+        try {
+            const payloadBase64 = token.split('.')[1];
+            const decodedPayload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString('utf8'));
+            tokenExpiry = decodedPayload.exp;
+        } catch (e) {
+            // Dự phòng nếu không giải mã được payload: mặc định hết hạn sau 1 giờ
+            tokenExpiry = nowInSeconds + 3600;
+        }
+
+        return token;
+    };
+
+    beforeAll(async () => {
+        // Khởi động kết nối DB
+        await sequelize.authenticate();
+
+        // Khởi động server động trên port ngẫu nhiên
+        server = app.listen(0, () => {
+            const address = server.address();
+            if (address && typeof address !== 'string') {
+                baseURL = `http://localhost:${address.port}`;
+            }
+        });
+
+        // Đợi baseURL được gán
+        await new Promise<void>((resolve) => {
+            const check = () => {
+                if (baseURL) resolve();
+                else setTimeout(check, 10);
+            };
+            check();
+        });
+
+        // Nếu không có cấu hình tài khoản kiểm thử trong .env, tự tạo tài khoản tạm thời
+        if (!testEmail || !testPassword) {
+            tempUserEmail = `fuzz_${Date.now()}@example.com`;
+            testPassword = "Password123!";
+            
+            // Đăng ký user thông qua AuthService để mã hóa mật khẩu chính xác
+            await AuthService.registerUser({
+                username: `fuzz_${Date.now()}`,
+                email: tempUserEmail,
+                password: testPassword
+            });
+            
+            testEmail = tempUserEmail;
+            isTempUserCreated = true;
+            console.log(`Đã tạo tài khoản test fuzz tạm thời: ${testEmail}`);
+        }
     });
 
-    it("không được crash (ném Unhandled Exception) với hàng loạt input ngẫu nhiên (Fuzzing)", async () => {
-        const ITERATIONS = 1000;
+    afterAll(async () => {
+        // Dọn dẹp tài khoản tạm thời nếu có
+        if (isTempUserCreated && tempUserEmail) {
+            await User.destroy({ where: { email: tempUserEmail } });
+            console.log(`Đã dọn dẹp tài khoản test fuzz tạm thời: ${tempUserEmail}`);
+        }
+
+        // Đóng server
+        if (server) {
+            await new Promise<void>((resolve) => server.close(() => resolve()));
+        }
+        
+        // Đóng kết nối DB
+        await sequelize.close();
+    });
+
+    it("không được crash (ném HTTP 500) với hàng loạt input ngẫu nhiên (Fuzzing qua API)", async () => {
+        const ITERATIONS = 200; // Số lần chạy fuzzing qua API (mỗi lần chạy qua DB thật nên để khoảng 200)
         let crashes = 0;
 
         for (let i = 0; i < ITERATIONS; i++) {
             const fuzzInput = generateFuzzFilters();
+            const token = await getAuthToken();
+
             try {
-                await TransactionService.searchTransactions(userId, fuzzInput);
-            } catch (error: any) {
-                // If it's a known ApiError (expected validation error etc), it's fine
-                // If it's an unhandled TypeError, we count it as a crash
-                if (!(error.message.includes("Lỗi dịch vụ") || error.statusCode)) {
+                const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(fuzzInput)
+                });
+
+                const result = await response.json() as any;
+
+                // Các mã lỗi validation (400) hoặc thành công (200) là hợp lệ
+                // Bất kỳ lỗi 500 (Internal Server Error) nào đều được coi là crash/unhandled exception
+                if (response.status === 500) {
                     crashes++;
-                    console.error("Fuzz crash with input:", fuzzInput, "Error:", error);
+                    console.error(`[Fuzz Crash] Input:`, fuzzInput, `Response status: 500, Error:`, result);
                 }
+            } catch (error: any) {
+                // Lỗi kết nối hoặc lỗi unhandled khác ngoài HTTP status code
+                crashes++;
+                console.error(`[Fuzz Error] Input:`, fuzzInput, `Exception:`, error);
             }
         }
 
