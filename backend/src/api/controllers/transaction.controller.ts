@@ -36,7 +36,7 @@ export class TransactionController {
             const result = await TransactionService.deleteTransaction(userId, Number(id));
             return AppResponse.success(res, result, 'Xóa giao dịch thành công!', 200);
         } catch (error) {
-            
+            next(error)
         }
     }
     
