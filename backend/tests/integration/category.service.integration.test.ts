@@ -4,6 +4,7 @@ import sequelize from "../../src/config/database.js";
 
 describe("CategoryService - Integration Test", () => {
     let createdCategoryIds: number[] = [];
+    const testUserId = 1;
 
     beforeAll(async () => {
         await sequelize.authenticate();
@@ -24,13 +25,13 @@ describe("CategoryService - Integration Test", () => {
             color: "#FFFFFF"
         };
 
-        const created = await CategoryService.createCategory(categoryData as any);
+        const created = await CategoryService.createCategory(testUserId, categoryData as any);
         createdCategoryIds.push(created.id);
 
         expect(created.id).toBeDefined();
         expect(created.name).toBe(categoryData.name);
 
-        const categories = await CategoryService.getCategories({ keyword: categoryData.name });
+        const categories = await CategoryService.getCategories(testUserId, { keyword: categoryData.name });
         expect(categories.some(c => c.id === created.id)).toBeTruthy();
     });
 
@@ -42,11 +43,11 @@ describe("CategoryService - Integration Test", () => {
             color: "#FFFFFF"
         };
 
-        const created = await CategoryService.createCategory(categoryData as any);
+        const created = await CategoryService.createCategory(testUserId, categoryData as any);
         createdCategoryIds.push(created.id);
 
         const updatedData = { ...categoryData, name: `Updated Cat ${Date.now()}` };
-        const updated = await CategoryService.updateCategory(created.id, updatedData as any);
+        const updated = await CategoryService.updateCategory(created.id, testUserId, updatedData as any);
 
         expect(updated.name).toBe(updatedData.name);
         
@@ -60,9 +61,9 @@ describe("CategoryService - Integration Test", () => {
             type: "EXPENSE"
         };
 
-        const created = await CategoryService.createCategory(categoryData as any);
+        const created = await CategoryService.createCategory(testUserId, categoryData as any);
         
-        await CategoryService.deleteCategory(created.id);
+        await CategoryService.deleteCategory(created.id, testUserId);
 
         const found = await Category.findByPk(created.id);
         expect(found).toBeNull();
@@ -72,10 +73,10 @@ describe("CategoryService - Integration Test", () => {
         const name = `Duplicate Cat ${Date.now()}`;
         const categoryData = { name, type: "EXPENSE" };
 
-        const created = await CategoryService.createCategory(categoryData as any);
+        const created = await CategoryService.createCategory(testUserId, categoryData as any);
         createdCategoryIds.push(created.id);
 
-        await expect(CategoryService.createCategory(categoryData as any))
+        await expect(CategoryService.createCategory(testUserId, categoryData as any))
             .rejects
             .toThrow('Danh mục này đã tồn tại trong hệ thống!');
     });
