@@ -1,173 +1,181 @@
-import request from 'supertest';
 import { jest } from '@jest/globals';
+import app from '../../src/app.js';
+import User from '../../src/database/models/User.js';
+import { AuthService } from '../../src/core/services/auth.service.js';
+import sequelize from '../../src/config/database.js';
+import type { Server } from 'http';
+import 'dotenv/config';
 
-// Mock middleware auth để bypass JWT
-jest.unstable_mockModule('../../src/api/middlewares/authMiddleware.js', () => ({
-    protect: (req: any, res: any, next: any) => {
-        req.user = {
-            id: 1,
-            accountId: 1,
-            profileId: 1,
-            role: 'User'
-        };
+// Tăng timeout cho Jest vì 200 requests HTTP qua DB thật có thể mất thời gian
+jest.setTimeout(60000); 
 
-        next();
+const generateRandomString = (length: number) => {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:",.<>?/';
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
     }
-}));
+    return result;
+};
 
-// Import app SAU KHI mock
-const { default: app } = await import('../../src/app.js');
+const generateRandomDate = () => {
+    const start = new Date(1970, 0, 1).getTime();
+    const end = new Date(2050, 11, 31).getTime();
+    return new Date(start + Math.random() * (end - start));
+};
 
-const mockToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock_token_payload.mock_signature";
-
-// ==========================================
-// 1. HÀM TỰ SINH DỮ LIỆU RÁC (FUZZ GENERATOR)
-// ==========================================
-const generateGarbagePayload = () => {
-
-    // 20% tạo payload gần hợp lệ
-    const shouldGenerateSemiValid = Math.random() < 0.2;
-
-    if (shouldGenerateSemiValid) {
-        return {
-            category_id: 1,
-            amount_limit: Math.floor(Math.random() * 1000000) + 1,
-            month: Math.floor(Math.random() * 12) + 1,
-            year: 2026
-        };
-    }
-
-    // 80% dữ liệu rác
-    const garbageTypes = [
-        null,
-        undefined,
-        "",
-        "   ",
-        {},
-        [],
-        true,
-        false,
-        "SQL INJECT ' OR 1=1; --",
-        "<script>alert('XSS')</script>",
-        -999999,
-        -1,
-        0,
-        13,
-        999999999,
-        3.14159,
-        Number.MAX_SAFE_INTEGER,
-        Number.MIN_SAFE_INTEGER,
-        Number.MAX_VALUE,
-        Infinity,
-        NaN,
-        "2026-05-01",
-        "123",
-        "null",
-        "undefined"
-    ];
-
-    const randomElement = () =>
-        garbageTypes[Math.floor(Math.random() * garbageTypes.length)];
+const generateFuzzFilters = () => {
+    const sorts = ["date_asc", "date_desc", "amount_asc", "amount_desc", "invalid_sort", "", null, undefined];
+    const types = ["INCOME", "EXPENSE", "INVALID_TYPE", generateRandomString(10), undefined];
 
     return {
-        category_id: randomElement(),
-        amount_limit: randomElement(),
-        month: randomElement(),
-        year: randomElement(),
-        random_extra_field: randomElement()
+        search: Math.random() > 0.5 ? generateRandomString(Math.floor(Math.random() * 100)) : undefined,
+        type: types[Math.floor(Math.random() * types.length)] as any,
+        category_id: Math.random() > 0.5 ? Math.floor(Math.random() * 1000) : (Math.random() > 0.5 ? generateRandomString(5) as any : undefined),
+        begin_date: Math.random() > 0.5 ? generateRandomDate() : (Math.random() > 0.5 ? generateRandomString(10) as any : undefined),
+        end_date: Math.random() > 0.5 ? generateRandomDate() : undefined,
+        sort: sorts[Math.floor(Math.random() * sorts.length)] as any,
     };
 };
 
-// ==========================================
-// 2. KỊCH BẢN KIỂM THỬ FUZZ TEST
-// ==========================================
-describe("Fuzz Test: Budget API (Bơm rác hệ thống)", () => {
+describe("Transaction - API-level Fuzz Test - searchTransactions", () => {
+    let server: Server;
+    let baseURL: string;
+    let cachedToken: string | null = null;
+    let tokenExpiry: number = 0; // Epoch timestamp in seconds
 
-    // Tăng thời gian Timeout vì Fuzz test sẽ bắn hàng trăm request liên tục
-    jest.setTimeout(60000);
+    let testEmail = "tung@gmail.com";
+    let testPassword = "tung12345";
+    let isTempUserCreated = false;
+    let tempUserEmail = '';
 
-    it("Hệ thống không được phát sinh lỗi nghiêm trọng khi nhận dữ liệu bất thường", async () => {
+    // Hàm lấy token, chỉ gọi lại khi token hết hạn
+    const getAuthToken = async (): Promise<string> => {
+        const nowInSeconds = Math.floor(Date.now() / 1000);
+        // Nếu token vẫn còn hạn (có buffer 60 giây) thì trả về luôn
+        if (cachedToken && nowInSeconds < tokenExpiry - 60) {
+            return cachedToken;
+        }
 
-        const ITERATIONS = 500;
+        // Nếu hết hạn hoặc chưa có, gọi API đăng nhập để lấy token mới
+        const loginResponse = await fetch(`${baseURL}/api/v1/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: testEmail,
+                password: testPassword
+            })
+        });
 
-        let internalServerErrorCount = 0;
-        let badRequestCount = 0;
+        const result = await loginResponse.json() as any;
+        if (!loginResponse.ok || !result.success) {
+            throw new Error(`Đăng nhập thất bại để lấy token: ${JSON.stringify(result)}`);
+        }
 
-        const statusMap: Record<number, number> = {};
+        const token = result.data.accessToken;
+        cachedToken = token;
 
-        console.log(`\n🚀 Bắt đầu Fuzz Test: Bắn ${ITERATIONS} payload bất thường vào API Thiết lập Ngân sách...`);
+        // Giải mã JWT Payload để lấy thời gian hết hạn (exp)
+        try {
+            const payloadBase64 = token.split('.')[1];
+            const decodedPayload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString('utf8'));
+            tokenExpiry = decodedPayload.exp;
+        } catch (e) {
+            // Dự phòng nếu không giải mã được payload: mặc định hết hạn sau 1 giờ
+            tokenExpiry = nowInSeconds + 3600;
+        }
+
+        return token;
+    };
+
+    beforeAll(async () => {
+        // Khởi động kết nối DB
+        await sequelize.authenticate();
+
+        // Khởi động server động trên port ngẫu nhiên
+        server = app.listen(0, () => {
+            const address = server.address();
+            if (address && typeof address !== 'string') {
+                baseURL = `http://localhost:${address.port}`;
+            }
+        });
+
+        // Đợi baseURL được gán
+        await new Promise<void>((resolve) => {
+            const check = () => {
+                if (baseURL) resolve();
+                else setTimeout(check, 10);
+            };
+            check();
+        });
+
+        // Nếu không có cấu hình tài khoản kiểm thử trong .env, tự tạo tài khoản tạm thời
+        if (!testEmail || !testPassword) {
+            tempUserEmail = `fuzz_${Date.now()}@example.com`;
+            testPassword = "Password123!";
+            
+            // Đăng ký user thông qua AuthService để mã hóa mật khẩu chính xác
+            await AuthService.registerUser({
+                username: `fuzz_${Date.now()}`,
+                email: tempUserEmail,
+                password: testPassword
+            });
+            
+            testEmail = tempUserEmail;
+            isTempUserCreated = true;
+            console.log(`Đã tạo tài khoản test fuzz tạm thời: ${testEmail}`);
+        }
+    });
+
+    afterAll(async () => {
+        // Dọn dẹp tài khoản tạm thời nếu có
+        if (isTempUserCreated && tempUserEmail) {
+            await User.destroy({ where: { email: tempUserEmail } });
+            console.log(`Đã dọn dẹp tài khoản test fuzz tạm thời: ${tempUserEmail}`);
+        }
+
+        // Đóng server
+        if (server) {
+            await new Promise<void>((resolve) => server.close(() => resolve()));
+        }
+        
+        // Đóng kết nối DB
+        await sequelize.close();
+    });
+
+    it("không được crash (ném HTTP 500) với hàng loạt input ngẫu nhiên (Fuzzing qua API)", async () => {
+        const ITERATIONS = 200; // Số lần chạy fuzzing qua API (mỗi lần chạy qua DB thật nên để khoảng 200)
+        let crashes = 0;
 
         for (let i = 0; i < ITERATIONS; i++) {
+            const fuzzInput = generateFuzzFilters();
+            const token = await getAuthToken();
 
-            const payload = generateGarbagePayload();
+            try {
+                const response = await fetch(`${baseURL}/api/v1/transactions/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(fuzzInput)
+                });
 
-            const start = Date.now();
+                const result = await response.json() as any;
 
-            const res = await request(app)
-                .post('/api/v1/budgets')
-                .set('Authorization', `Bearer ${mockToken}`)
-                .send(payload);
-
-            const responseTime = Date.now() - start;
-
-            // Ghi nhận phản hồi của Server
-            statusMap[res.status] = (statusMap[res.status] || 0) + 1;
-
-            if (res.status === 500) {
-                internalServerErrorCount++;
-                console.log('\n❌ PAYLOAD GÂY LỖI 500:');
-                console.log(payload);
-
-                console.log('RESPONSE:');
-                console.log(res.body);
-            }
-            else if (res.status === 400) {
-                badRequestCount++;
-            }
-
-            // Hệ thống không được lỗi hạ tầng nghiêm trọng
-            expect(res.status).not.toBe(502);
-            expect(res.status).not.toBe(503);
-            expect(res.status).not.toBe(504);
-
-            // Warning nếu response quá chậm
-            if (responseTime > 3000) {
-                console.warn(
-                    `⚠️ Request #${i + 1} phản hồi chậm: ${responseTime}ms`
-                );
+                // Các mã lỗi validation (400) hoặc thành công (200) là hợp lệ
+                // Bất kỳ lỗi 500 (Internal Server Error) nào đều được coi là crash/unhandled exception
+                if (response.status === 500) {
+                    crashes++;
+                    console.error(`[Fuzz Crash] Input:`, fuzzInput, `Response status: 500, Error:`, result);
+                }
+            } catch (error: any) {
+                // Lỗi kết nối hoặc lỗi unhandled khác ngoài HTTP status code
+                crashes++;
+                console.error(`[Fuzz Error] Input:`, fuzzInput, `Exception:`, error);
             }
         }
 
-        console.log(`\n🛡️ KẾT QUẢ FUZZ TEST`);
-        console.log(`========================================`);
-
-        console.log(`- Tổng số request: ${ITERATIONS}`);
-
-        console.log(`- Thống kê Status Code:`);
-        console.log(statusMap);
-
-        console.log(`- Số request bị Validation chặn (HTTP 400): ${badRequestCount}/${ITERATIONS}`);
-
-        console.log(`- Số request gây lỗi Internal Server Error (HTTP 500): ${internalServerErrorCount}/${ITERATIONS}`);
-
-        console.log(`========================================`);
-
-        // TIÊU CHÍ ĐÁNH GIÁ SQA:
-        // Không được có lỗi crash/unhandled exception server
-        expect(internalServerErrorCount).toBe(0);
-
-        if (internalServerErrorCount === 0) {
-
-            console.log(`
-                ✅ KẾT LUẬN: PASS
-                Hệ thống xử lý ổn định trước dữ liệu bất thường.
-            `);
-        }
-        else{
-                console.log(`
-                    ❌ KẾT LUẬN: FAIL
-                    Hệ thống phát sinh lỗi nghiêm trọng khi fuzz testing.
-                `);
-            }
+        expect(crashes).toBe(0);
     });
 });

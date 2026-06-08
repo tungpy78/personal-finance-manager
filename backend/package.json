@@ -3,18 +3,14 @@
   "type": "module",
   "version": "1.0.0",
   "main": "index.js",
- "scripts": {
+  "scripts": {
     "dev": "tsx watch src/server.ts",
-
+    "sync": "tsx sync.ts",
     "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit",
-
-    "test:budget:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration/budget.integration.test.ts",
-
-    "test:budget:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit/budget.unit.test.ts",
-
-    "test:budget:fuzz": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/fuzz/budget.fuzz.test.ts",
-
-    "test:budget": "npm run test:budget:unit && npm run test:budget:integration && npm run test:budget:fuzz"
+    "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration",
+    "test:fuzz": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/fuzz",
+    "test:load": "tsx tests/load/search.load.ts",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "keywords": [],
   "author": "",
@@ -26,8 +22,10 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.22.0",
-    "sequelize": "^6.37.8"
+    "sequelize": "^6.37.8",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/autocannon": "^7.12.7",
@@ -42,13 +40,12 @@
     "autocannon": "^8.0.0",
     "cross-env": "^10.1.0",
     "eslint": "^9.39.4",
-    "jest": "^30.4.2",
+    "jest": "^30.3.0",
     "prettier": "^3.8.2",
     "supertest": "^7.2.2",
-    "ts-jest": "^29.4.11",
+    "ts-jest": "^29.4.9",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
-  },
-  "test:fuzz": "NODE_OPTIONS=--experimental-vm-modules jest tests/fuzz"
+  }
 }
