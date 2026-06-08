@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button, Layout, Menu, Space, theme, Typography } from 'antd';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { DashboardOutlined, TransactionOutlined, SettingOutlined, WalletOutlined, LogoutOutlined, PieChartOutlined } from '@ant-design/icons';
+import { TransactionOutlined, WalletOutlined, LogoutOutlined, PieChartOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../stores/auth.store';
 
 const { Header, Sider, Content } = Layout;
@@ -12,24 +12,22 @@ export const MainLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-     const user = useAuthStore((state) => state.user);
+    const user = useAuthStore((state) => state.user);
     const logout = useAuthStore((state) => state.logout);
     
-    const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken()
+    const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken();
 
     const handleLogout = () => {
         logout();
         navigate('/login');
     };
 
+    // Đã xóa menu Tổng quan và Cài đặt
     const menuItems = [
-        { key: '/', icon: <DashboardOutlined />, label: 'Tổng quan' },
         { key: '/transactions', icon: <TransactionOutlined />, label: 'Sổ giao dịch' },
         { key: '/categories', icon: <WalletOutlined />, label: 'Danh mục' },
         { key: '/budgets', icon: <PieChartOutlined />, label: 'Ngân sách' },
-        { key: '/settings', icon: <SettingOutlined />, label: 'Cài đặt' },
     ];
-
 
     return (
         <Layout style={{ minHeight: '100vh' }}>
@@ -41,7 +39,8 @@ export const MainLayout = () => {
                 <Menu 
                     theme="dark" 
                     mode="inline" 
-                    selectedKeys={[location.pathname]} 
+                    // Set key mặc định tương ứng với route hiện tại
+                    selectedKeys={[location.pathname === '/' ? '/transactions' : location.pathname]} 
                     items={menuItems}
                     onClick={({ key }) => navigate(key)}
                 />
@@ -49,11 +48,12 @@ export const MainLayout = () => {
             <Layout>
                 <Header 
                 style={{
-                padding: '0 24px',
-                background: colorBgContainer,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center', }}
+                    padding: '0 24px',
+                    background: colorBgContainer,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center', 
+                }}
                 >
                     <div style={{ fontSize: 16 }}>
                         Quản lý chi tiêu cá nhân

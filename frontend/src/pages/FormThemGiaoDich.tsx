@@ -127,7 +127,7 @@ export const FormThemGiaoDich = ({ open, onClose, onSuccess, editData}: FormThem
         const err = error as AxiosError<ApiErrorResponse>;
 
         message.error(
-            err.response?.data?.message ||
+            err.message ||
             'Có lỗi xảy ra'
         );
     }

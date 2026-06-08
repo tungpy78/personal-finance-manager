@@ -124,8 +124,8 @@ export const LoginPage = () => {
                     </Button>
                     <div style={{ textAlign: 'center', marginTop: 16 }}>
                         <Text type="secondary">
-                            Đã có tài khoản?{' '}
-                            <Link to="/register">Đăng nhập</Link>
+                            Đã chưa có tài khoản?{' '}
+                            <Link to="/register">Đăng ký</Link>
                         </Text>
                     </div>
                 </Form>

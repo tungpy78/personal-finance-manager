@@ -8,8 +8,6 @@ import { RegisterPage } from '../pages/RegisterPage';
 import { CategoryPage } from '../pages/CategoryPage';
 import BudgetPage from '../pages/BudgetPage';
 
-
-const DashboardPage = () => <h2>Trang Tổng quan (Charts)</h2>;
 const NotFoundPage = () => <h2>404 - Không tìm thấy trang</h2>;
 
 // 1. NGƯỜI GÁC CỔNG BÊN TRONG (Dành cho các trang bắt buộc đăng nhập)
@@ -17,7 +15,6 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
     // Lấy trạng thái từ Zustand Store
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     
-
     if (!isAuthenticated) {
         // Chưa đăng nhập -> Đá về trang /login
         return <Navigate to="/login" replace />;
@@ -31,7 +28,7 @@ const PublicRoute = ({ children }: { children: JSX.Element }) => {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
     if (isAuthenticated) {
-        // Đã đăng nhập rồi mà còn cố vào trang Login -> Đá về trang chủ
+        // Đã đăng nhập rồi mà còn cố vào trang Login -> Đá về trang chủ (sẽ tự động sang sổ giao dịch)
         return <Navigate to="/" replace />;
     }
     return children;
@@ -48,10 +45,10 @@ export const AppRoutes = () => {
                 </ProtectedRoute>
             ), 
             children: [
-                { index: true, element: <DashboardPage /> },
+                // Tự động chuyển hướng trang gốc sang trang Giao dịch
+                { index: true, element: <Navigate to="/transactions" replace /> },
                 { path: 'transactions', element: <TransactionPage /> },
                 { path: 'categories', element: <CategoryPage /> },
-                { path: 'settings', element: <h2>Cài đặt</h2> },
                 { path: 'budgets', element: <BudgetPage /> }
             ]
         },
@@ -66,7 +63,7 @@ export const AppRoutes = () => {
         },
         {
             path: '/register',
-            // BỌC LOGIN VÀO TRONG PUBLIC ROUTE
+            // BỌC REGISTER VÀO TRONG PUBLIC ROUTE
             element: (
                 <PublicRoute>
                     <RegisterPage />
