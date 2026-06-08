@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import * as bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 process.env.JWT_SECRET = "test_secret_key";
