@@ -5,7 +5,3 @@
 **/.DS_Store
 backend/.env
 *.log
-jest.config.js
-jest.config.mjs
-Makefile
-package-lock.json
