@@ -20,10 +20,4 @@ budgetRouter.get(
   BudgetController.getBudgetProgress
 );
 
-budgetRouter.get(
-  '/total',
-  protect,
-  BudgetController.getTotalAmount
-);
-
 export default budgetRouter;
