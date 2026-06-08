@@ -80,4 +80,14 @@ describe("TransactionService - Unit Test - searchTransactions", () => {
             .rejects
             .toThrow("Lỗi dịch vụ khi tìm kiếm giao dịch: DB Error");
     });
+
+    it("TC22: nên ném ra chính xác ApiError nếu repository ném ra ApiError", async () => {
+        const { default: ApiError } = await import("../../src/utils/ErrorClass.js");
+        const apiError = new ApiError("Lỗi tuỳ chỉnh", 400);
+        mockFindByCriteria.mockRejectedValue(apiError);
+
+        await expect(TransactionService.searchTransactions(userId, mockSearchFilters.empty))
+            .rejects
+            .toThrow(apiError);
+    });
 });
