@@ -8,6 +8,7 @@
     "sync": "tsx sync.ts",
     "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit",
     "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration",
+    "test:category": "cross-env NODE_OPTIONS=--experimental-vm-modules jest category",
     "test:fuzz": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/fuzz",
     "test:load": "tsx tests/load/search.load.ts",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest"
