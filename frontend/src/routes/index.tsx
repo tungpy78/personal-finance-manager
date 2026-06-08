@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth.store';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { CategoryPage } from '../pages/CategoryPage';
+import BudgetPage from '../pages/BudgetPage';
 
 
 const DashboardPage = () => <h2>Trang Tổng quan (Charts)</h2>;
@@ -51,7 +52,7 @@ export const AppRoutes = () => {
                 { path: 'transactions', element: <TransactionPage /> },
                 { path: 'categories', element: <CategoryPage /> },
                 { path: 'settings', element: <h2>Cài đặt</h2> },
-
+                { path: 'budgets', element: <BudgetPage /> }
             ]
         },
         {

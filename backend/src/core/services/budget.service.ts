@@ -4,7 +4,7 @@ import { BudgetRepository } from '../../database/repositories/budget.repository.
 
 export class BudgetService {
   static async setupBudget(userId: number, payload: UpsertBudgetDTO) {
-    const category = await CategoryRepository.findByPk(payload.category_id);
+    const category = await CategoryRepository.findByPk(payload.category_id, userId);
     
     if (!category) {
       throw new Error("Danh mục chi tiêu không tồn tại hoặc không thuộc quyền sở hữu của bạn.");
