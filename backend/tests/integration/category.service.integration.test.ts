@@ -78,6 +78,6 @@ describe("CategoryService - Integration Test", () => {
 
         await expect(CategoryService.createCategory(testUserId, categoryData as any))
             .rejects
-            .toThrow('Danh mục này đã tồn tại trong hệ thống!');
+            .toThrow('Danh mục này đã tồn tại trong danh sách của bạn!');
     });
 });
