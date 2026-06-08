@@ -54,6 +54,7 @@ export class BudgetService {
     const budget = await BudgetRepository.getBudgetByCategory(userId, categoryId, month, year);
     
     if (!budget) return null; 
+    if (budget.amount <= 0) return null;
 
     const totalSpent = await BudgetRepository.getSpentAmount({ userId, categoryId, month, year });
     const percentage = (totalSpent / budget.amount) * 100;

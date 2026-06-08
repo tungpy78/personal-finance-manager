@@ -36,4 +36,16 @@ export const UpsertBudgetSchema = z.object({
     })
 });
 
+export const ProgressQuerySchema = z.object({
+  month: z.coerce
+    .number({ invalid_type_error: "Tháng phải là số" })
+    .int("Tháng phải là số nguyên")
+    .min(1, "Tháng không hợp lệ (nhỏ hơn 1)")
+    .max(12, "Tháng không hợp lệ (lớn hơn 12)"),
+    
+  year: z.coerce
+    .number({ invalid_type_error: "Năm phải là số" })
+    .min(2000, "Năm không hợp lệ")
+});
+
 export type UpsertBudgetDTO = z.infer<typeof UpsertBudgetSchema>;

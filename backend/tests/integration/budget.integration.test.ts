@@ -161,14 +161,12 @@ describe("Integration Test: Budget APIs (Quản lý ngân sách)", () => {
         });
 
         it("TC-NS-11: Nên trả về lỗi nếu thiếu month/year", async () => {
-
             const res = await request(app)
                 .get('/api/v1/budgets/progress')
                 .set('Authorization', `Bearer ${mockToken}`)
                 .query({});
 
-            expect(res.status).not.toBe(400);
-
+            expect(res.status).toBe(400);
             expect(res.body.success).toBe(false);
         });
 
@@ -182,8 +180,7 @@ describe("Integration Test: Budget APIs (Quản lý ngân sách)", () => {
                     year: 2026
                 });
 
-            expect(res.status).not.toBe(400);
-
+            expect(res.status).toBe(400);
             expect(res.body.success).toBe(false);
         });
 

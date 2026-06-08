@@ -334,29 +334,18 @@ describe("Unit Test: BudgetService", () => {
         });
 
         it("TC-NS-14: Nên xử lý chính xác số thực khi tính phần trăm", async () => {
-            mockGetBudgetByCategory.mockResolvedValue({
-                amount: 5000000
-            });
+            mockGetBudgetByCategory.mockResolvedValue({amount: 5000000});
 
-            mockGetSpentAmount.mockResolvedValue(
-                3999999
+            mockGetSpentAmount.mockResolvedValue(3999999);
+
+            const alert = await BudgetService.checkBudgetAlert(
+                userId,
+                1,
+                testMonth,
+                testYear
             );
 
-            const alert =
-                await BudgetService.checkBudgetAlert(
-                    userId,
-                    1,
-                    testMonth,
-                    testYear
-                );
-
-            expect(alert).toBeDefined();
-
-            expect(alert?.level)
-                .toBe('WARNING');
-
-            expect(alert?.percentage)
-                .toBe(80);  
+            expect(alert).toBeNull();
         });
     });
 });
